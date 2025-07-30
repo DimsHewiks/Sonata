@@ -1,16 +1,21 @@
 <?php
 // Включение отображения ошибок
+use Core\Cache\RoutesCache;
+
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-require __DIR__.'/vendor/autoload.php';
-
 error_log("Base URL: " . $_SERVER['REQUEST_URI']);
 error_log("SCRIPT_NAME: " . $_SERVER['SCRIPT_NAME']);
+require __DIR__.'/vendor/autoload.php';
 
-$router = new Core\Router();
-$router->registerControllers(__DIR__.'/api');
-$router->registerControllers(__DIR__.'/view');
+$debug = getenv('APP_ENV') === 'development';
+//
+//(new RoutesCache())->clear();
+
+
+$router = new Core\Router($debug);
+$router->registerControllers();
 
 // Debug routes
 $router->dispatch(

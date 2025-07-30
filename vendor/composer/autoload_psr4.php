@@ -8,5 +8,6 @@ $baseDir = dirname($vendorDir);
 return array(
     'View\\' => array($baseDir . '/view'),
     'Core\\' => array($baseDir . '/core'),
+    'Command\\' => array($baseDir . '/commands'),
     'Api\\' => array($baseDir . '/api'),
 );

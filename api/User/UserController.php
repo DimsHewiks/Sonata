@@ -10,7 +10,7 @@ class UserController
     #[Route(path: '/test', method: 'GET')]
     public function test()
     {
-        return ['status' => 'OK'];
+        return $_GET;
     }
 
     #[Route(path: '/hui', method: 'GET')]

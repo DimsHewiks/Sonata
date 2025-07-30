@@ -8,9 +8,11 @@ $baseDir = dirname($vendorDir);
 return array(
     'Api\\Product\\ProductController' => $baseDir . '/api/Product/ProductController.php',
     'Api\\User\\UserController' => $baseDir . '/api/User/UserController.php',
+    'Command\\Cache\\CacheController' => $baseDir . '/commands/Cache/CacheController.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
-    'Core\\Annotations\\Controller' => $baseDir . '/core/Annotations/Controller.php',
-    'Core\\Annotations\\Route' => $baseDir . '/core/Annotations/Route.php',
+    'Core\\Attributes\\Controller' => $baseDir . '/core/Attributes/Controller.php',
+    'Core\\Attributes\\Route' => $baseDir . '/core/Attributes/Route.php',
+    'Core\\Cache\\RoutesCache' => $baseDir . '/core/Cache/RoutesCache.php',
     'Core\\ControllerFinder' => $baseDir . '/core/ControllerFinder.php',
     'Core\\Router' => $baseDir . '/core/Router.php',
     'View\\Home\\HomeController' => $baseDir . '/view/Home/HomeController.php',

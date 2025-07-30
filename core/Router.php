@@ -1,9 +1,19 @@
 <?php
 namespace Core;
 
+use Core\Cache\RoutesCache;
+
 class Router
 {
     private array $routes = [];
+    private RoutesCache $cache;
+    private bool $debug;
+
+    public function __construct(bool $debug = false)
+    {
+        $this->cache = new RoutesCache();
+        $this->debug = $debug;
+    }
 
     public function addRoute(
         string $pattern,
@@ -113,11 +123,29 @@ class Router
         }
     }
 
-    public function registerControllers(string $directory): void
+    public function registerControllers(): void
     {
+        $controllersDirectory = [
+            __DIR__.'/../api',
+            __DIR__.'/../view',
+            __DIR__.'/../commands'
+        ];
+
+        if (!$this->debug && $cachedRoutes = $this->cache->get()) {
+            $this->routes = $cachedRoutes;
+            return;
+        }
+
         $finder = new ControllerFinder();
-        foreach ($finder->find($directory) as $controller) {
-            $this->registerController($controller);
+        foreach ($controllersDirectory as $directory) {
+            foreach ($finder->find($directory) as $controller) {
+                $this->registerController($controller);
+            }
+        }
+
+
+        if (!$this->debug) {
+            $this->cache->store($this->routes);
         }
     }
     private function registerController(string $className): void

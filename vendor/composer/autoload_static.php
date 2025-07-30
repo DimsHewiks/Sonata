@@ -14,6 +14,7 @@ class ComposerStaticInitd751713988987e9331980363e24189ce
         'C' => 
         array (
             'Core\\' => 5,
+            'Command\\' => 8,
         ),
         'A' => 
         array (
@@ -30,6 +31,10 @@ class ComposerStaticInitd751713988987e9331980363e24189ce
         array (
             0 => __DIR__ . '/../..' . '/core',
         ),
+        'Command\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/commands',
+        ),
         'Api\\' => 
         array (
             0 => __DIR__ . '/../..' . '/api',
@@ -39,9 +44,11 @@ class ComposerStaticInitd751713988987e9331980363e24189ce
     public static $classMap = array (
         'Api\\Product\\ProductController' => __DIR__ . '/../..' . '/api/Product/ProductController.php',
         'Api\\User\\UserController' => __DIR__ . '/../..' . '/api/User/UserController.php',
+        'Command\\Cache\\CacheController' => __DIR__ . '/../..' . '/commands/Cache/CacheController.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Core\\Annotations\\Controller' => __DIR__ . '/../..' . '/core/Annotations/Controller.php',
-        'Core\\Annotations\\Route' => __DIR__ . '/../..' . '/core/Annotations/Route.php',
+        'Core\\Attributes\\Controller' => __DIR__ . '/../..' . '/core/Attributes/Controller.php',
+        'Core\\Attributes\\Route' => __DIR__ . '/../..' . '/core/Attributes/Route.php',
+        'Core\\Cache\\RoutesCache' => __DIR__ . '/../..' . '/core/Cache/RoutesCache.php',
         'Core\\ControllerFinder' => __DIR__ . '/../..' . '/core/ControllerFinder.php',
         'Core\\Router' => __DIR__ . '/../..' . '/core/Router.php',
         'View\\Home\\HomeController' => __DIR__ . '/../..' . '/view/Home/HomeController.php',

@@ -10,7 +10,8 @@
     "psr-4": {
       "Api\\": "api/",
       "Core\\": "core/",
-      "View\\": "view/"
+      "View\\": "view/",
+      "Command\\": "commands/"
     }
   },
   "config": {
