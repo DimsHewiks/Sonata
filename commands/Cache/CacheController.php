@@ -5,7 +5,7 @@ use Core\Attributes\Controller;
 use Core\Attributes\Route;
 use Core\Cache\RoutesCache;
 
-#[Controller(prefix: '/command')]
+#[Controller(prefix: '/command/cache')]
 class CacheController
 {
     #[Route(path: '/clear', method: 'GET')]

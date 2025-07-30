@@ -3,6 +3,7 @@ namespace Api\User;
 
 use Core\Attributes\Controller;
 use Core\Attributes\Route;
+use Core\Database\Db;
 
 #[Controller(prefix: '/api/user')]
 class UserController
@@ -14,8 +15,23 @@ class UserController
     }
 
     #[Route(path: '/hui', method: 'GET')]
-    public function hui()
+    public function hui(): array
     {
-        return ['status' => 'hui'];
+        try{
+            $stmt = Db::getInstance();
+            $pdo = $stmt->prepare(/**@lang MariaDB*/"
+            select * from users
+        ");
+            $pdo->execute();
+            return $pdo->fetchAll();
+        }
+        catch (\PDOException $e) {
+            return [
+                "file"=> $e->getFile(),
+                "line" => $e->getLine(),
+                "text" => $e->getMessage(),
+            ];
+        }
+
     }
 }
