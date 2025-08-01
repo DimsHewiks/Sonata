@@ -21,7 +21,6 @@ $debug = $_ENV['APP_ENV'] === 'dev';
 $router = new Core\Router($debug);
 $router->registerControllers();
 
-// Debug routes
 $router->dispatch(
     parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH),
     $_SERVER['REQUEST_METHOD']

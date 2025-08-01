@@ -1,6 +1,7 @@
 <?php
 namespace Core;
 
+use Core\Attributes\Params;
 use Core\Cache\RoutesCache;
 
 class Router
@@ -38,58 +39,31 @@ class Router
 
     public function dispatch(string $uri, string $method): void
     {
-        // Удаляем query-параметры
         $uri = strtok($uri, '?');
 
-        error_log("Dispatching: $method $uri");
-
         foreach ($this->routes as $route) {
-            if ($route['method'] !== $method) {
-                continue;
-            }
-
-            error_log("Checking route: " . $route['pattern']);
-
-            if (preg_match($route['pattern'], $uri, $matches)) {
-                error_log("Route matched with params: " . print_r($matches, true));
-
-                // Фильтруем только именованные параметры
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-
+            if ($this->matchRoute($route, $uri, $method)) {
                 try {
                     $controller = new $route['controller']();
+                    $methodName = $route['action'];
+
+                    $params = $this->resolveParameters($controller, $methodName);
                     $response = call_user_func_array(
-                        [$controller, $route['action']],
+                        [$controller, $methodName],
                         $params
                     );
 
-                    if(is_array($response)){
-                        header('Content-Type: application/json');
-                        echo json_encode($response);
-                        return;
-                    }
-                    echo $response;
+                    $this->sendResponse($response);
                     return;
+
                 } catch (\Throwable $e) {
-                    error_log("Controller error: " . $e->getMessage());
-                    http_response_code(500);
-                    echo json_encode(['error' => 'Internal Server Error']);
+                    $this->sendError(500, $e->getMessage());
                     return;
                 }
             }
         }
 
-        http_response_code(404);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'error' => 'Route not found',
-            'requested' => $uri,
-            'method' => $method,
-            'available_routes' => array_map(fn($r) => [
-                'path' => $r['pattern'],
-                'method' => $r['method']
-            ], $this->routes)
-        ]);
+        $this->sendNotFound($uri, $method);
     }
 
     public function registerRoutesFromAnnotations(string $controllerClass): void
@@ -97,16 +71,13 @@ class Router
         try {
             $reflection = new \ReflectionClass($controllerClass);
 
-            // Получаем атрибуты класса
             foreach ($reflection->getAttributes(\Core\Attributes\Route::class) as $classAttr) {
                 $classRoute = $classAttr->newInstance();
 
-                // Обрабатываем методы класса
                 foreach ($reflection->getMethods() as $method) {
                     foreach ($method->getAttributes(\Core\Attributes\Route::class) as $methodAttr) {
                         $methodRoute = $methodAttr->newInstance();
 
-                        // Формируем полный путь
                         $fullPath = rtrim($classRoute->path, '/') . '/' . ltrim($methodRoute->path, '/');
 
                         $this->addRoute(
@@ -153,13 +124,11 @@ class Router
         try {
             $reflection = new \ReflectionClass($className);
 
-            // Получаем префикс из аннотации Controller
             $controllerAttr = $reflection->getAttributes(\Core\Attributes\Controller::class);
             if (empty($controllerAttr)) return;
 
             $prefix = $controllerAttr[0]->newInstance()->prefix;
 
-            // Регистрируем методы
             foreach ($reflection->getMethods() as $method) {
                 $routeAttrs = $method->getAttributes(\Core\Attributes\Route::class);
                 if (empty($routeAttrs)) continue;
@@ -179,5 +148,127 @@ class Router
         }
     }
 
+    /**
+     * @throws \ReflectionException
+     */
+    private function resolveMethodParameters(object $controller, string $methodName, array $urlParams): array
+    {
+        $reflectionMethod = new \ReflectionMethod($controller, $methodName);
+        $parameters = [];
+
+        // Обрабатываем атрибут Params если есть
+        foreach ($reflectionMethod->getAttributes(Params::class) as $attr) {
+            $paramsAttr = $attr->newInstance();
+            $dtoClass = $paramsAttr->class;
+
+            $inputData = match($paramsAttr->from) {
+                'query' => $_GET,
+                'body' => json_decode(file_get_contents('php://input'), true) ?? [],
+                default => array_merge($_REQUEST, $urlParams)
+            };
+
+            $parameters[] = new $dtoClass($inputData);
+        }
+
+        foreach ($reflectionMethod->getParameters() as $param) {
+            if (isset($urlParams[$param->getName()])) {
+                $parameters[] = $urlParams[$param->getName()];
+            }
+        }
+
+        return $parameters;
+    }
+
+    private function sendResponse($response): void
+    {
+        if (is_array($response) || is_object($response)) {
+            header('Content-Type: application/json');
+            echo json_encode($response);
+        } else {
+            echo $response;
+        }
+    }
+
+    private function sendNotFound(string $uri, string $method): void
+    {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'error' => 'Route not found',
+            'requested' => $uri,
+            'method' => $method,
+            'available_routes' => array_map(fn($r) => [
+                'path' => $r['pattern'],
+                'method' => $r['method']
+            ], $this->routes)
+        ]);
+    }
+
+    private function sendError(int $code, string $message): void
+    {
+        http_response_code($code);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $message]);
+    }
+
+
+    private function getRequestData(string $source): array
+    {
+        return match($source) {
+            'query' => $_GET,
+            'jsonBody' => $this->getJsonBody(),
+            'formData' => $this->getFormData(),
+            'request' => $_REQUEST,
+            default => []
+        };
+    }
+    private function getJsonBody(): array
+    {
+        $content = file_get_contents('php://input');
+        if (empty($content)) {
+            return [];
+        }
+
+        $data = json_decode($content, true);
+        return is_array($data) ? $data : [];
+    }
+
+    private function getFormData(): array
+    {
+        // Объединяем POST данные и файлы
+        return array_merge($_POST, $_FILES);
+    }
+    /**
+     * @throws \ReflectionException
+     */
+    private function resolveParameters(object $controller, string $method): array
+    {
+        $reflection = new \ReflectionMethod($controller, $method);
+        $parameters = [];
+        // Обрабатываем атрибут Params
+        foreach ($reflection->getAttributes(Params::class) as $attribute) {
+            $paramsAttr = $attribute->newInstance();
+            $data = $this->getRequestData($paramsAttr->from);
+            $dto = new $paramsAttr->class($data);
+            // Валидация
+            if ($errors = $dto->validate()) {
+
+                $this->sendError(400, implode(' | ',$errors));
+                exit;
+            }
+
+            $parameters[] = $dto;
+        }
+
+        return $parameters;
+    }
+    private function matchRoute(array $route, string $uri, string $method): bool
+    {
+        if (strtoupper($route['method']) !== strtoupper($method)) {
+            return false;
+        }
+
+        return (bool)preg_match($route['pattern'], $uri, $matches);
+    }
 
 }
