@@ -17,7 +17,7 @@ try {
     die('Please create .env file. Copy from .env.example');
 }
 
-$debug = $_ENV['APP_ENV'] === 'dev';
+$debug = getenv('APP_ENV') === 'dev';
 $router = new Core\Router($debug);
 $router->registerControllers();
 

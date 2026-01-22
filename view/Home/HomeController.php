@@ -3,16 +3,16 @@ namespace View\Home;
 
 use Core\Attributes\Controller;
 use Core\Attributes\Route;
-
+use View\Home\Pages\HomePage;
 
 
 #[Controller(prefix: '/')]
 class HomeController
 {
     #[Route(path: '/', method: 'GET')]
-    public function test():string
+    public function test(): string
     {
-        return '<h2>Home page</h2>';
+        return new HomePage()->home();
     }
 
     #[Route(path: '/about', method: 'GET')]
