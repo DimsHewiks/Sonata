@@ -8,6 +8,7 @@ error_log("Base URL: " . $_SERVER['REQUEST_URI']);
 error_log("SCRIPT_NAME: " . $_SERVER['SCRIPT_NAME']);
 
 require __DIR__.'/vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
 
 $envPath = __DIR__.'/';
 try {
