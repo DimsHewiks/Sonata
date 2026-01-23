@@ -1,7 +1,10 @@
 <?php
-// bootstrap.php
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->safeLoad(); // не падает, если .env нет
+require_once __DIR__ . '/vendor/autoload.php';
+
+if (file_exists(__DIR__ . '/.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
 
 // Генерация JWT_SECRET, если не задан
 if (!getenv('JWT_SECRET')) {

@@ -1,13 +1,30 @@
 services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: sonata
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./Docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sonata-net
   php:
     build:
       context: .
       dockerfile: Docker/php/Dockerfile
-
+    environment:
+      DB_HOST: mariadb
+      DB_NAME: sonata
+      DB_USER: appuser
+      DB_PASS: apppass
+      JWT_SECRET: auto-generated-at-first-run
+    depends_on:
+      - mariadb
     networks:
       - sonata-net
-    environment:
-      - APP_ENV=dev
 
   nginx:
     image: nginx:alpine
@@ -20,6 +37,9 @@ services:
       - php
     networks:
       - sonata-net
+
+volumes:
+  db_data:
 
 networks:
   sonata-net:
