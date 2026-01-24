@@ -1,6 +1,7 @@
 <?php
 namespace Core;
 
+use Core\Attributes\From;
 use Core\Attributes\Params;
 use Core\Cache\RoutesCache;
 
@@ -10,24 +11,28 @@ class Router
     private RoutesCache $cache;
     private bool $debug;
 
-    public function __construct(bool $debug = false)
+    private \Core\Container\ContainerInterface $container;
+
+    public function __construct(\Core\Container\ContainerInterface $container, bool $debug = false)
     {
+        $this->container = $container;
         $this->cache = new RoutesCache();
         $this->debug = $debug;
     }
 
-    public function addRoute(
-        string $pattern,
-        string $method,
-        string $controller,
-        string $action
-    ): void {
+    public function addRoute(string $pattern, string $method, string $controller, string $action): void
+    {
         $this->routes[] = [
-            'pattern' => '#^'.$pattern.'$#',
+            'pattern' => $this->convertRoutePattern($pattern),
             'method' => $method,
             'controller' => $controller,
             'action' => $action
         ];
+    }
+    private function convertRoutePattern(string $pattern): string
+    {
+        $pattern = preg_replace('#\{([a-zA-Z_][a-zA-Z0-9_]*)\}#', '([^/]+)', $pattern);
+        return '#^' . $pattern . '$#';
     }
 
     public function getRoutes(): array
@@ -42,16 +47,15 @@ class Router
         $uri = strtok($uri, '?');
 
         foreach ($this->routes as $route) {
-            if ($this->matchRoute($route, $uri, $method)) {
+            $matches = $this->matchRoute($route, $uri, $method);
+            if ($matches !== null) {
                 try {
-                    $controller = new $route['controller']();
+                    $controller = $this->container->get($route['controller']);
                     $methodName = $route['action'];
 
-                    $params = $this->resolveParameters($controller, $methodName);
-                    $response = call_user_func_array(
-                        [$controller, $methodName],
-                        $params
-                    );
+                    // Передаём URL-параметры в resolveParameters
+                    $params = $this->resolveParameters($controller, $methodName, $matches);
+                    $response = call_user_func_array([$controller, $methodName], $params);
 
                     $this->sendResponse($response);
                     return;
@@ -148,37 +152,6 @@ class Router
         }
     }
 
-    /**
-     * @throws \ReflectionException
-     */
-    private function resolveMethodParameters(object $controller, string $methodName, array $urlParams): array
-    {
-        $reflectionMethod = new \ReflectionMethod($controller, $methodName);
-        $parameters = [];
-
-        // Обрабатываем атрибут Params если есть
-        foreach ($reflectionMethod->getAttributes(Params::class) as $attr) {
-            $paramsAttr = $attr->newInstance();
-            $dtoClass = $paramsAttr->class;
-
-            $inputData = match($paramsAttr->from) {
-                'query' => $_GET,
-                'body' => json_decode(file_get_contents('php://input'), true) ?? [],
-                default => array_merge($_REQUEST, $urlParams)
-            };
-
-            $parameters[] = new $dtoClass($inputData);
-        }
-
-        foreach ($reflectionMethod->getParameters() as $param) {
-            if (isset($urlParams[$param->getName()])) {
-                $parameters[] = $urlParams[$param->getName()];
-            }
-        }
-
-        return $parameters;
-    }
-
     private function sendResponse($response): void
     {
         if (is_array($response) || is_object($response)) {
@@ -241,34 +214,87 @@ class Router
     /**
      * @throws \ReflectionException
      */
-    private function resolveParameters(object $controller, string $method): array
+    /**
+     * @throws \ReflectionException
+     */
+    private function resolveParameters(object $controller, string $method, array $urlMatches = []): array
     {
         $reflection = new \ReflectionMethod($controller, $method);
         $parameters = [];
-        // Обрабатываем атрибут Params
-        foreach ($reflection->getAttributes(Params::class) as $attribute) {
-            $paramsAttr = $attribute->newInstance();
-            $data = $this->getRequestData($paramsAttr->from);
-            $dto = new $paramsAttr->class($data);
-            // Валидация
-            if ($errors = $dto->validate()) {
+        $urlIndex = 0;
 
-                $this->sendError(400, implode(' | ',$errors));
-                exit;
+        foreach ($reflection->getParameters() as $param) {
+            $type = $param->getType();
+
+            if ($type && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                $fromAttr = null;
+                foreach ($param->getAttributes(From::class) as $attr) {
+                    $fromAttr = $attr->newInstance();
+                    break;
+                }
+
+                if (!$fromAttr) {
+                    throw new \LogicException(
+                        "Parameter \${$param->getName()} in {$reflection->getDeclaringClass()->getName()}::{$method}() " .
+                        "must be annotated with #[From('source')]"
+                    );
+                }
+
+                $data = match ($fromAttr->source) {
+                    'query' => $_GET,
+                    'json' => $this->getJsonBody(),
+                    'formData' => $this->getFormData(),
+                    default => throw new \InvalidArgumentException("Unsupported source: {$fromAttr->source}")
+                };
+
+                $dto = new ($type->getName())($data);
+
+                if (method_exists($dto, 'validate')) {
+                    $errors = $dto->validate();
+                    if (!empty($errors)) {
+                        $errorMessage = is_array($errors)
+                            ? implode(' | ', array_map(
+                                fn($k, $v) => "$k: $v",
+                                array_keys($errors),
+                                array_values($errors)
+                            ))
+                            : (string)$errors;
+
+                        $this->sendError(400, $errorMessage);
+                        exit;
+                    }
+                }
+
+                $parameters[] = $dto;
+            } else {
+                if (isset($urlMatches[$urlIndex])) {
+                    $parameters[] = $urlMatches[$urlIndex];
+                    $urlIndex++;
+                } else {
+                    if ($param->isDefaultValueAvailable()) {
+                        $parameters[] = $param->getDefaultValue();
+                    } else {
+                        throw new \LogicException("Missing URL parameter for \${$param->getName()}");
+                    }
+                }
             }
-
-            $parameters[] = $dto;
         }
 
         return $parameters;
     }
-    private function matchRoute(array $route, string $uri, string $method): bool
+    private function matchRoute(array $route, string $uri, string $method): ?array
     {
         if (strtoupper($route['method']) !== strtoupper($method)) {
-            return false;
+            return null;
         }
 
-        return (bool)preg_match($route['pattern'], $uri, $matches);
+        $matches = [];
+        if (preg_match($route['pattern'], $uri, $matches)) {
+            array_shift($matches);
+            return $matches;
+        }
+
+        return null;
     }
 
 }

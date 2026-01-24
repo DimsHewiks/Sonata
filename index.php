@@ -19,7 +19,8 @@ try {
 }
 
 $debug = getenv('APP_ENV') === 'dev';
-$router = new Core\Router($debug);
+$container = require __DIR__ . '/bootstrap.php';
+$router = new Core\Router($container, $debug);
 $router->registerControllers();
 
 $router->dispatch(
