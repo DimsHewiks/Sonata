@@ -1,6 +1,8 @@
 <?php
 
 use Core\Container\Container;
+use Symfony\Component\Validator\Validation;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -16,6 +18,12 @@ if (!getenv('JWT_SECRET')) {
 }
 
 $container = new Container();
+
+$container->set(ValidatorInterface::class, static function () {
+    return Validation::createValidatorBuilder()
+        ->enableAttributeMapping()
+        ->getValidator();
+});
 
 $container->set(PDO::class, static function (): PDO {
     return new PDO(

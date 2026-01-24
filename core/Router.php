@@ -156,6 +156,16 @@ class Router
     {
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
+
+        // Преобразуем объект в массив, если нужно
+        if (is_object($data)) {
+            if (method_exists($data, 'toArray')) {
+                $data = $data->toArray();
+            } else {
+                $data = get_object_vars($data);
+            }
+        }
+
         echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
@@ -211,6 +221,9 @@ class Router
     /**
      * @throws \ReflectionException
      */
+    /**
+     * @throws \ReflectionException
+     */
     private function resolveParameters(object $controller, string $method, array $urlMatches = []): array
     {
         $reflection = new \ReflectionMethod($controller, $method);
@@ -220,6 +233,7 @@ class Router
         foreach ($reflection->getParameters() as $param) {
             $type = $param->getType();
 
+            // === DTO с #[From] ===
             if ($type && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
                 $fromAttr = null;
                 foreach ($param->getAttributes(\Core\Attributes\From::class) as $attr) {
@@ -244,27 +258,53 @@ class Router
                 $dtoClass = $type->getName();
                 $dto = new $dtoClass($data);
 
-                if (method_exists($dto, 'validate')) {
-                    $errors = $dto->validate();
-                    if (!empty($errors)) {
-                        $errorMessage = is_array($errors)
-                            ? implode(' | ', array_map(
-                                fn($k, $v) => "$k: $v",
-                                array_keys($errors),
-                                array_values($errors)
-                            ))
-                            : (string)$errors;
+                // === Валидация через Symfony Validator (если доступен) ===
+                if (!interface_exists(\Symfony\Component\Validator\Validator\ValidatorInterface::class)) {
+                    $this->sendError(500, "ValidatorInterface class not found");
+                    exit;
+                }
 
-                        $this->sendError(400, $errorMessage);
-                        exit;
+                if (!$this->container->has(\Symfony\Component\Validator\Validator\ValidatorInterface::class)) {
+                    $this->sendError(500, "Validator service not registered");
+                    exit;
+                }
+
+                // Теперь безопасно получаем и используем валидатор
+                $validator = $this->container->get(\Symfony\Component\Validator\Validator\ValidatorInterface::class);
+                $errors = $validator->validate($dto);
+
+                if (count($errors) > 0) {
+                    $messages = [];
+                    foreach ($errors as $error) {
+                        $messages[] = $error->getPropertyPath() . ': ' . $error->getMessage();
                     }
+                    $this->sendError(400, implode(' | ', $messages));
+                    exit;
                 }
 
                 $parameters[] = $dto;
             }
+            // === Скалярные параметры из URL ===
             else {
                 if (isset($urlMatches[$urlIndex])) {
-                    $parameters[] = $urlMatches[$urlIndex];
+                    $rawValue = $urlMatches[$urlIndex];
+
+                    if ($param->getType()?->getName() === 'array') {
+                        $values = array_filter(array_map('trim', explode(',', $rawValue)));
+                        $values = array_map(function ($v) {
+                            if (is_numeric($v)) {
+                                return str_contains($v, '.') ? (float)$v : (int)$v;
+                            }
+                            return $v;
+                        }, $values);
+                        $parameters[] = array_values($values);
+                    } else {
+                        $value = $rawValue;
+                        if (is_numeric($value)) {
+                            $value = str_contains($value, '.') ? (float)$value : (int)$value;
+                        }
+                        $parameters[] = $value;
+                    }
                     $urlIndex++;
                 } elseif ($param->isDefaultValueAvailable()) {
                     $parameters[] = $param->getDefaultValue();
@@ -276,6 +316,7 @@ class Router
 
         return $parameters;
     }
+
     private function matchRoute(array $route, string $uri, string $method): ?array
     {
         if (strtoupper($route['method']) !== strtoupper($method)) {

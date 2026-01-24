@@ -21,7 +21,9 @@ class Container implements ContainerInterface
         return isset($this->definitions[$id]) || class_exists($id);
     }
 
-
+    /**
+     * @throws \ReflectionException
+     */
     public function get(string $id)
     {
         if (isset($this->instances[$id])) {
@@ -30,11 +32,20 @@ class Container implements ContainerInterface
 
         $concrete = $this->definitions[$id] ?? $id;
 
+        // === Поддержка фабрик (callable) ===
+        if (is_callable($concrete)) {
+            $instance = $concrete($this);
+            if (isset($this->definitions[$id])) {
+                $this->instances[$id] = $instance; // кэшируем, если зарегистрирован явно
+            }
+            return $instance;
+        }
+
+        // === Обычный класс ===
         if (!is_string($concrete) || !class_exists($concrete)) {
             throw new \Exception("Service or class not found: $id");
         }
 
-        // Singleton: кэшируем только зарегистрированные сервисы
         $shouldCache = isset($this->definitions[$id]);
 
         $reflection = new ReflectionClass($concrete);
