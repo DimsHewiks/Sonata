@@ -8,7 +8,7 @@ services:
       MYSQL_PASSWORD: apppass
     volumes:
       - db_data:/var/lib/mysql
-      - ./Docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./Docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - sonata-net
   php:
@@ -20,7 +20,7 @@ services:
       DB_NAME: sonata
       DB_USER: appuser
       DB_PASS: apppass
-      JWT_SECRET: auto-generated-at-first-run
+      JWT_SECRET: a-string-secret-at-least-256-bits-long
     depends_on:
       - mariadb
     networks:
