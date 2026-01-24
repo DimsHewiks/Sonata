@@ -61,7 +61,7 @@ class Router
                     return;
 
                 } catch (\Throwable $e) {
-                    $this->sendError(500, $e->getMessage());
+                    $this->sendError(500, $e->getMessage(), $e->getTraceAsString());
                     return;
                 }
             }
@@ -152,36 +152,33 @@ class Router
         }
     }
 
-    private function sendResponse($response): void
+    private function sendResponse(mixed $data): void
     {
-        if (is_array($response) || is_object($response)) {
-            header('Content-Type: application/json');
-            echo json_encode($response);
-        } else {
-            echo $response;
-        }
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private function sendNotFound(string $uri, string $method): void
     {
-        http_response_code(404);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'error' => 'Route not found',
-            'requested' => $uri,
-            'method' => $method,
-            'available_routes' => array_map(fn($r) => [
-                'path' => $r['pattern'],
-                'method' => $r['method']
-            ], $this->routes)
-        ]);
+        $this->sendError(404, 'Route not found');
     }
 
-    private function sendError(int $code, string $message): void
+    private function sendError(int $code, string $message, ?string $trace = null): void
     {
         http_response_code($code);
-        header('Content-Type: application/json');
-        echo json_encode(['error' => $message]);
+        header('Content-Type: application/json; charset=utf-8');
+
+        $response = [
+            'error' => [
+                'code' => $code,
+                'message' => $message,
+                'details' => ($this->debug && $trace) ? $trace : null
+            ]
+        ];
+
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 
 
@@ -214,9 +211,6 @@ class Router
     /**
      * @throws \ReflectionException
      */
-    /**
-     * @throws \ReflectionException
-     */
     private function resolveParameters(object $controller, string $method, array $urlMatches = []): array
     {
         $reflection = new \ReflectionMethod($controller, $method);
@@ -228,7 +222,7 @@ class Router
 
             if ($type && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
                 $fromAttr = null;
-                foreach ($param->getAttributes(From::class) as $attr) {
+                foreach ($param->getAttributes(\Core\Attributes\From::class) as $attr) {
                     $fromAttr = $attr->newInstance();
                     break;
                 }
@@ -247,7 +241,8 @@ class Router
                     default => throw new \InvalidArgumentException("Unsupported source: {$fromAttr->source}")
                 };
 
-                $dto = new ($type->getName())($data);
+                $dtoClass = $type->getName();
+                $dto = new $dtoClass($data);
 
                 if (method_exists($dto, 'validate')) {
                     $errors = $dto->validate();
@@ -266,16 +261,15 @@ class Router
                 }
 
                 $parameters[] = $dto;
-            } else {
+            }
+            else {
                 if (isset($urlMatches[$urlIndex])) {
                     $parameters[] = $urlMatches[$urlIndex];
                     $urlIndex++;
+                } elseif ($param->isDefaultValueAvailable()) {
+                    $parameters[] = $param->getDefaultValue();
                 } else {
-                    if ($param->isDefaultValueAvailable()) {
-                        $parameters[] = $param->getDefaultValue();
-                    } else {
-                        throw new \LogicException("Missing URL parameter for \${$param->getName()}");
-                    }
+                    throw new \LogicException("Missing URL parameter for \${$param->getName()}");
                 }
             }
         }
