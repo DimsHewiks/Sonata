@@ -6,7 +6,7 @@ use Core\Http\ApiResponse;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(title: "User", description: "Информация о пользователе")]
-class UserResponse  extends ApiResponse //Если хотим возвращать как json
+class UserResponse  extends ApiResponse
 {
     #[OA\Property(example: 1)]
     public int $id;

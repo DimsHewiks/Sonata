@@ -9,11 +9,11 @@ use Core\Attributes\Route;
 use Core\Attributes\Tag;
 
 #[Controller(prefix: '/api')]
-#[Tag('Пользователи', 'Регистрация пользователя')]
+#[Tag('Пользователи', 'Работа с юзерами')]
 class UserController
 {
-    #[Route(path: '/users', method: 'GET')]
-    #[Response(UserResponse::class, isArray: true)] //атрибут для ответа в сваггере (если false - то возвращает объект, иначе массив объектов)
+    #[Route(path: '/users', method: 'GET', summary: 'Регистрация пользователя', description: 'Метод, позволяющий регать юзера')]
+    #[Response(UserResponse::class, isArray: true)]
     public function listUsers(): array
     {
         return [

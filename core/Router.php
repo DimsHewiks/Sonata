@@ -157,7 +157,6 @@ class Router
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
 
-        // Преобразуем объект в массив, если нужно
         if (is_object($data)) {
             if (method_exists($data, 'toArray')) {
                 $data = $data->toArray();
@@ -233,7 +232,6 @@ class Router
         foreach ($reflection->getParameters() as $param) {
             $type = $param->getType();
 
-            // === DTO с #[From] ===
             if ($type && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
                 $fromAttr = null;
                 foreach ($param->getAttributes(\Core\Attributes\From::class) as $attr) {
@@ -258,7 +256,6 @@ class Router
                 $dtoClass = $type->getName();
                 $dto = new $dtoClass($data);
 
-                // === Валидация через Symfony Validator (если доступен) ===
                 if (!interface_exists(\Symfony\Component\Validator\Validator\ValidatorInterface::class)) {
                     $this->sendError(500, "ValidatorInterface class not found");
                     exit;
@@ -269,7 +266,6 @@ class Router
                     exit;
                 }
 
-                // Теперь безопасно получаем и используем валидатор
                 $validator = $this->container->get(\Symfony\Component\Validator\Validator\ValidatorInterface::class);
                 $errors = $validator->validate($dto);
 
@@ -284,7 +280,6 @@ class Router
 
                 $parameters[] = $dto;
             }
-            // === Скалярные параметры из URL ===
             else {
                 if (isset($urlMatches[$urlIndex])) {
                     $rawValue = $urlMatches[$urlIndex];
