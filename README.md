@@ -10,7 +10,7 @@
 - Установка 
 bash:
   
-        git clone your-repo sonata
+        git clone https://github.com/DimsHewiks/Sonata.git
         cd sonata
         composer install
         cp .env.example .env
@@ -42,6 +42,7 @@ bash:
         }
         
    → Маршрут /api/users автоматически зарегистрирован.
+
 
 2. DI-контейнер (Dependency Injection)
    Все зависимости внедряются автоматически:
