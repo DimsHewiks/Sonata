@@ -13,7 +13,7 @@ use Core\Attributes\Tag;
 class UserController
 {
     #[Route(path: '/users', method: 'GET')]
-    #[Response(UserResponse::class, isArray: true)]
+    #[Response(UserResponse::class, isArray: true)] //атрибут для ответа в сваггере (если false - то возвращает объект, иначе массив объектов)
     public function listUsers(): array
     {
         return [
