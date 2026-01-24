@@ -58,7 +58,6 @@ class OpenApiGenerator
 
         $controllerPrefix = $controllerAttrs[0]->newInstance()->prefix;
 
-        // Читаем тег
         $tagAttr = null;
         foreach ($reflection->getAttributes(\Core\Attributes\Tag::class) as $attr) {
             $tagAttr = $attr->newInstance();
@@ -100,7 +99,6 @@ class OpenApiGenerator
      */
     private function getResponseSchema(\ReflectionMethod $method): array
     {
-        // Сначала проверяем наличие #[Response]
         $responseAttrs = $method->getAttributes(\Core\Attributes\Response::class);
 
         if (!empty($responseAttrs)) {
@@ -121,7 +119,6 @@ class OpenApiGenerator
             }
         }
 
-        // Fallback: пытаемся определить из типа возврата
         $returnType = $method->getReturnType();
         if (!$returnType) {
             return ['type' => 'object'];
@@ -172,7 +169,6 @@ class OpenApiGenerator
                 }
             }
 
-            // Пример из #[OA\Property]
             $oaAttrs = $property->getAttributes(\OpenApi\Attributes\Property::class);
             if (!empty($oaAttrs)) {
                 $oaProp = $oaAttrs[0]->newInstance();
@@ -217,12 +213,10 @@ class OpenApiGenerator
                 ]
             ];
 
-            // Описание операции (если задано)
             if (!empty($route['description'])) {
                 $operation['description'] = $route['description'];
             }
 
-            // Query-параметры
             if (!empty($params['query'])) {
                 foreach ($params['query'] as $name => $schema) {
                     $operation['parameters'][] = [
@@ -234,7 +228,6 @@ class OpenApiGenerator
                 }
             }
 
-            // Тело запроса (JSON)
             if (!empty($params['body'])) {
                 $operation['requestBody'] = $params['body'];
             }
@@ -247,11 +240,9 @@ class OpenApiGenerator
             }
             $paths[$path][$method] = $operation;
 
-            // Сохраняем описание тега
             $tagDescriptions[$route['tagName']] = $route['tagDescription'];
         }
 
-        // Формируем массив тегов
         $tags = [];
         foreach ($tagDescriptions as $name => $description) {
             $tags[] = [
@@ -312,7 +303,6 @@ class OpenApiGenerator
                 $propertyName = $property->getName();
                 $propertyType = $property->getType();
 
-                // Определяем тип
                 $schema = ['type' => 'string'];
                 if ($propertyType) {
                     $typeName = $propertyType->getName();
@@ -325,7 +315,6 @@ class OpenApiGenerator
                     }
                 }
 
-                // Ищем #[OA\Property]
                 $oaAttrs = $property->getAttributes(\OpenApi\Attributes\Property::class);
                 if (!empty($oaAttrs)) {
                     $oaProp = $oaAttrs[0]->newInstance();

@@ -32,16 +32,14 @@ class Container implements ContainerInterface
 
         $concrete = $this->definitions[$id] ?? $id;
 
-        // === Поддержка фабрик (callable) ===
         if (is_callable($concrete)) {
             $instance = $concrete($this);
             if (isset($this->definitions[$id])) {
-                $this->instances[$id] = $instance; // кэшируем, если зарегистрирован явно
+                $this->instances[$id] = $instance;
             }
             return $instance;
         }
 
-        // === Обычный класс ===
         if (!is_string($concrete) || !class_exists($concrete)) {
             throw new \Exception("Service or class not found: $id");
         }
