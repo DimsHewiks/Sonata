@@ -60,29 +60,34 @@ return $container;
 function registerAutoServices(Container $container, array $directories): void
 {
     foreach ($directories as $dir) {
-        if (!is_dir($dir)) {
-            continue;
-        }
+        if (!is_dir($dir)) continue;
 
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($iterator as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
+            if ($file->getExtension() !== 'php') continue;
 
             $baseName = basename($dir);
             $relativePath = str_replace($dir . '/', '', $file->getPathname());
             $className = ucfirst($baseName) . '\\' . str_replace('/', '\\', substr($relativePath, 0, -4));
 
+            // Регистрируем Service и Repository автоматически
             if (
-                str_ends_with($className, 'Repository') ||
-                str_ends_with($className, 'Service')
+                str_ends_with($className, 'Service') ||
+                str_ends_with($className, 'Repository')
             ) {
+                // Для большинства классов — просто регистрируем как есть
                 $container->set($className);
             }
         }
     }
+
+    $container->set(\Api\Auth\Services\AuthService::class, function ($c) {
+        return new \Api\Auth\Services\AuthService(
+            $c->get(\Api\Auth\Repositories\AuthRepository::class),
+            getenv('JWT_SECRET')
+        );
+    });
 }

@@ -213,6 +213,10 @@ class OpenApiGenerator
                 ]
             ];
 
+            if (!empty($params['body'])) {
+                $operation['requestBody'] = $params['body'];
+            }
+
             if (!empty($route['description'])) {
                 $operation['description'] = $route['description'];
             }
@@ -276,16 +280,20 @@ class OpenApiGenerator
 
     }
 
-    private function extractParameters(ReflectionMethod $method): array
+    private function extractParameters(\ReflectionMethod $method): array
     {
         $query = [];
         $body = null;
 
         foreach ($method->getParameters() as $param) {
             $fromAttr = null;
-            foreach ($param->getAttributes(From::class) as $attr) {
-                $fromAttr = $attr->newInstance();
-                break;
+
+            // Ищем атрибут From
+            foreach ($param->getAttributes() as $attr) {
+                if ($attr->getName() === 'Core\\Attributes\\From') {
+                    $fromAttr = $attr->newInstance();
+                    break;
+                }
             }
 
             if (!$fromAttr) continue;
@@ -296,14 +304,15 @@ class OpenApiGenerator
             $dtoClass = $type->getName();
             if (!class_exists($dtoClass)) continue;
 
-            $dtoReflection = new ReflectionClass($dtoClass);
+            $dtoReflection = new \ReflectionClass($dtoClass);
             $properties = [];
 
             foreach ($dtoReflection->getProperties() as $property) {
                 $propertyName = $property->getName();
-                $propertyType = $property->getType();
 
+                // Определяем тип
                 $schema = ['type' => 'string'];
+                $propertyType = $property->getType();
                 if ($propertyType) {
                     $typeName = $propertyType->getName();
                     if (in_array($typeName, ['int', 'integer'])) {
@@ -315,14 +324,16 @@ class OpenApiGenerator
                     }
                 }
 
-                $oaAttrs = $property->getAttributes(\OpenApi\Attributes\Property::class);
-                if (!empty($oaAttrs)) {
-                    $oaProp = $oaAttrs[0]->newInstance();
-                    if (isset($oaProp->example)) {
-                        $schema['example'] = $oaProp->example;
-                    }
-                    if (isset($oaProp->description)) {
-                        $schema['description'] = $oaProp->description;
+                foreach ($property->getAttributes() as $propAttr) {
+                    if ($propAttr->getName() === 'OpenApi\\Attributes\\Property') {
+                        $oaProp = $propAttr->newInstance();
+                        if (isset($oaProp->example)) {
+                            $schema['example'] = $oaProp->example;
+                        }
+                        if (isset($oaProp->description)) {
+                            $schema['description'] = $oaProp->description;
+                        }
+                        break;
                     }
                 }
 
