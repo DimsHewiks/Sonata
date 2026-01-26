@@ -157,6 +157,21 @@ class OpenApiGenerator
             $propertyName = $property->getName();
             $propertyType = $property->getType();
 
+            if ($propertyType && $propertyType instanceof \ReflectionNamedType) {
+                $typeName = $propertyType->getName();
+
+                if (class_exists($typeName) && str_contains($typeName, 'Dto\\Response')) {
+
+                    $nestedShortName = basename(str_replace('\\', '/', $typeName));
+
+                    $this->collectSchema($typeName);
+
+                    $properties[$propertyName] = ['$ref' => '#/components/schemas/' . $nestedShortName];
+                    continue;
+                }
+            }
+
+            // Обработка обычного типа
             $schema = ['type' => 'string'];
             if ($propertyType) {
                 $typeName = $propertyType->getName();
@@ -360,5 +375,56 @@ class OpenApiGenerator
         }
 
         return ['query' => $query, 'body' => $body];
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    private function extractNestedSchema(string $className): array
+    {
+        $reflection = new \ReflectionClass($className);
+        $properties = [];
+
+        foreach ($reflection->getProperties() as $property) {
+            $propertyName = $property->getName();
+            $propertyType = $property->getType();
+
+            if (!$propertyType || !$propertyType instanceof \ReflectionNamedType) {
+                $properties[$propertyName] = ['type' => 'string'];
+                continue;
+            }
+
+            $typeName = $propertyType->getName();
+
+            // Если это вложенный DTO
+            if (class_exists($typeName) && str_contains($typeName, 'Dto\\Response')) {
+                $properties[$propertyName] = ['$ref' => '#/components/schemas/' . basename(str_replace('\\', '/', $typeName))];
+                // Регистрируем схему вложенного класса
+                $this->collectSchema($typeName);
+            } else {
+                // Простой тип
+                $typeMap = [
+                    'int' => 'integer',
+                    'float' => 'number',
+                    'bool' => 'boolean',
+                    'string' => 'string'
+                ];
+                $properties[$propertyName] = ['type' => $typeMap[$typeName] ?? 'string'];
+            }
+
+            // Добавляем примеры из OA\Property
+            $oaAttrs = $property->getAttributes(\OpenApi\Attributes\Property::class);
+            if (!empty($oaAttrs)) {
+                $oaProp = $oaAttrs[0]->newInstance();
+                if (isset($oaProp->example)) {
+                    $properties[$propertyName]['example'] = $oaProp->example;
+                }
+                if (isset($oaProp->description)) {
+                    $properties[$propertyName]['description'] = $oaProp->description;
+                }
+            }
+        }
+
+        return $properties;
     }
 }

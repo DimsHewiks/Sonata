@@ -29,7 +29,7 @@ class AuthService
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
             'token_type' => 'Bearer',
-            'expires_in' => 3600
+            'expires_in' => 60*15
         ];
     }
 
@@ -51,10 +51,8 @@ class AuthService
             return null;
         }
 
-        // Отзываем старый
         $this->authRepository->revokeRefreshTokenById($record['id']);
 
-        // Выдаём новый
         $newAccessToken = $this->generateAccessToken($record['user_id'], $record['email']);
         $newRefreshToken = $this->createRefreshToken($record['user_id']);
 
@@ -95,7 +93,7 @@ class AuthService
             'sub' => $userId,
             'email' => $email,
             'iat' => time(),
-            'exp' => time() + 3600
+            'exp' => time() + 60*15
         ];
         return JWT::encode($payload, $this->config->getJwtSecret(), 'HS256');
     }

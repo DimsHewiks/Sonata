@@ -2,6 +2,7 @@
 
 namespace Api\Auth\Controllers;
 
+use Api\Auth\DTOs\Request\RefreshDto;
 use Api\Auth\DTOs\Request\RegistDTO;
 use Api\Auth\Services\AuthService;
 use Core\Attributes\Controller;
@@ -16,7 +17,7 @@ use Core\Http\Response;
 class AuthController
 {
     public function __construct(
-        #[Inject]private AuthService $authService
+        #[Inject] private AuthService $authService
     ) {}
 
     #[Route(path: '/login', method: 'POST', summary: 'Вход', description: 'Метод входа в систему')]
@@ -41,73 +42,86 @@ class AuthController
     }
 
     #[Route(path: '/me', method: 'GET', summary: 'Профиль', description: 'Получение информации об авторизированном пользователе')]
-    public function profile(): string
+    public function profile(): never
     {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
             http_response_code(401);
-            return json_encode(['error' => 'Missing token']);
+
+            Response::error('Missing token');
         }
 
         $payload = $this->authService->validateToken($matches[1]);
         if (!$payload) {
             http_response_code(401);
-            return json_encode(['error' => 'Invalid token']);
+
+            Response::error('Invalid token');
         }
 
-        $return = [
+        Response::json([
             'user_id' => $payload->sub,
             'email' => $payload->email,
             'message' => 'Authenticated!'
-        ];
-
-        Response::json($return, 200);
+        ], 200);
     }
 
     #[Route(path: '/registration', method: 'POST', summary: 'Регистрация', description: 'Метод регистрации нового юзера')]
-    public function createAccount(): string
+    public function createAccount(): never
     {
         $input = json_decode(file_get_contents('php://input'), true);
         try {
             $this->authService->register($input['email'] ?? '', $input['password'] ?? '');
-            return json_encode(['msg' => 'Успешная регистрация']);
+            Response::json([
+                'msg' => 'Успешная регистрация'
+            ]);
         } catch (\InvalidArgumentException $e) {
-            http_response_code(400);
-            return json_encode(['error' => $e->getMessage()]);
+            Response::error(
+                $e->getMessage(),
+                400
+            );
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            http_response_code(500);
-            return json_encode(['error' => 'Registration failed']);
+            Response::error(
+                'Registration failed',
+                500
+            );
         }
     }
 
     #[Route(path: '/refresh', method: 'POST', summary: 'обновление рефреша', description: 'Метод для обновления рефреша юзера')]
-    public function refresh(): string
+    public function refresh(
+        #[From('json')] RefreshDto $dto
+    ): never
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $refreshToken = $input['refresh_token'] ?? '';
-
         try {
-            $tokens = $this->authService->refresh($refreshToken);
+            $tokens = $this->authService->refresh(
+                $dto->refreshToken
+            );
+
             if (!$tokens) {
-                http_response_code(401);
-                return json_encode(['error' => 'Invalid or expired refresh token']);
+                Response::error(
+                    'Invalid or expired refresh token',
+                    401
+                );
             }
-            return json_encode($tokens);
+
+            Response::json($tokens);
+
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            http_response_code(500);
-            return json_encode(['error' => 'Token refresh failed']);
+            Response::error('Token refresh failed', 500);
         }
     }
 
     #[Route(path: '/logout', method: 'POST', summary: 'Выход из системы', description: 'Метод входа в систему')]
-    public function logout(): string
+    public function logout(): never
     {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (preg_match('/Bearer\s+(.+)$/', $authHeader, $matches)) {
             $this->authService->logout($matches[1]);
         }
-        return json_encode(['message' => 'Logged out']);
+        Response::json([
+            'message' => 'Logged out'
+        ]);
     }
 }
