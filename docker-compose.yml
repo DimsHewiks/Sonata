@@ -22,6 +22,7 @@ services:
       DB_NAME: sonata
       DB_USER: appuser
       DB_PASS: apppass
+      DB_PORT: 3306
       JWT_SECRET: a-string-secret-at-least-256-bits-long
     depends_on:
       - mariadb

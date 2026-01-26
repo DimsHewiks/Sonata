@@ -6,6 +6,7 @@ use Api\Auth\DTOs\Request\RegistDTO;
 use Api\Auth\Services\AuthService;
 use Core\Attributes\Controller;
 use Core\Attributes\From;
+use Core\Attributes\Inject;
 use Core\Attributes\Route;
 use Core\Attributes\Tag;
 use Core\Http\Response;
@@ -14,7 +15,9 @@ use Core\Http\Response;
 #[Tag('Регистрация/Авторизация')]
 class AuthController
 {
-    public function __construct(private AuthService $authService) {}
+    public function __construct(
+        #[Inject]private AuthService $authService
+    ) {}
 
     #[Route(path: '/login', method: 'POST', summary: 'Вход', description: 'Метод входа в систему')]
     public function login(#[From('json')] RegistDTO $dto): never
@@ -24,7 +27,9 @@ class AuthController
             if (!$tokens) {
                 Response::error('Invalid credentials', 401);
             }
+
             Response::json($tokens, 200);
+
         } catch (\Exception $e) {
             error_log($e->getMessage());
             Response::error(
@@ -50,11 +55,13 @@ class AuthController
             return json_encode(['error' => 'Invalid token']);
         }
 
-        return json_encode([
+        $return = [
             'user_id' => $payload->sub,
             'email' => $payload->email,
             'message' => 'Authenticated!'
-        ]);
+        ];
+
+        Response::json($return, 200);
     }
 
     #[Route(path: '/registration', method: 'POST', summary: 'Регистрация', description: 'Метод регистрации нового юзера')]

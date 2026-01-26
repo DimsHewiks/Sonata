@@ -61,7 +61,7 @@ class Router
                     return;
 
                 } catch (\Throwable $e) {
-                    $this->sendError(500, $e->getMessage(), $e->getTraceAsString());
+                    $this->sendError(500, $e->getMessage(), $e);
                     return;
                 }
             }
@@ -173,7 +173,7 @@ class Router
         $this->sendError(404, 'Route not found');
     }
 
-    private function sendError(int $code, string $message, ?string $trace = null): void
+    private function sendError(int $code, string $message, ?\Throwable $exception = null): never
     {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
@@ -182,11 +182,28 @@ class Router
             'error' => [
                 'code' => $code,
                 'message' => $message,
-                'details' => ($this->debug && $trace) ? $trace : null
+                'details' => null
             ]
         ];
 
-        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // Добавляем трассировку в режиме отладки
+        if ($this->debug && $exception) {
+            $response['error']['details'] = [
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => array_map(function ($frame) {
+                    return [
+                        'file' => $frame['file'] ?? '[internal]',
+                        'line' => $frame['line'] ?? 0,
+                        'function' => $frame['function'] ?? '',
+                        'class' => $frame['class'] ?? '',
+                        'type' => $frame['type'] ?? ''
+                    ];
+                }, $exception->getTrace())
+            ];
+        }
+
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
 

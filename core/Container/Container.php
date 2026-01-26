@@ -32,6 +32,7 @@ class Container implements ContainerInterface
 
         $concrete = $this->definitions[$id] ?? $id;
 
+        // Поддержка фабрик
         if (is_callable($concrete)) {
             $instance = $concrete($this);
             if (isset($this->definitions[$id])) {
@@ -46,7 +47,7 @@ class Container implements ContainerInterface
 
         $shouldCache = isset($this->definitions[$id]);
 
-        $reflection = new ReflectionClass($concrete);
+        $reflection = new \ReflectionClass($concrete);
         if (!$reflection->isInstantiable()) {
             throw new \Exception("Cannot instantiate $concrete");
         }
@@ -57,8 +58,24 @@ class Container implements ContainerInterface
         } else {
             $dependencies = [];
             foreach ($constructor->getParameters() as $param) {
+                // Проверяем #[Inject]
+                $injectAttr = null;
+                foreach ($param->getAttributes(\Core\Attributes\Inject::class) as $attr) {
+                    $injectAttr = $attr->newInstance();
+                    break;
+                }
+
+                if ($injectAttr) {
+                    $serviceId = $injectAttr->id ?? $param->getType()?->getName();
+                    if ($serviceId) {
+                        $dependencies[] = $this->get($serviceId);
+                        continue;
+                    }
+                }
+
+                // Старый способ (fallback)
                 $type = $param->getType();
-                if (!$type || !$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+                if (!$type || !$type instanceof \ReflectionNamedType || $type->isBuiltin()) {
                     if ($param->isDefaultValueAvailable()) {
                         $dependencies[] = $param->getDefaultValue();
                     } else {

@@ -2,17 +2,14 @@
 
 namespace Api\Auth\Repositories;
 
-use Core\Container\ContainerInterface;
+
 use PDO;
 
 class AuthRepository
 {
-    private PDO $pdo;
-
-    public function __construct(ContainerInterface $container)
-    {
-        $this->pdo = $container->get(PDO::class);
-    }
+    public function __construct(
+        private PDO $pdo
+    ) { }
 
     public function findUserByEmail(string $email): ?array
     {

@@ -3,14 +3,16 @@
 namespace Api\Auth\Services;
 
 use Api\Auth\Repositories\AuthRepository;
+use Core\Attributes\Inject;
+use Core\Service\ConfigService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 class AuthService
 {
     public function __construct(
-        private AuthRepository $authRepository,
-        private string $jwtSecret
+        #[Inject] private AuthRepository $authRepository,
+        #[Inject] private ConfigService $config
     ) {}
 
     public function login(string $email, string $password): ?array
@@ -67,17 +69,18 @@ class AuthService
     public function logout(string $accessToken): void
     {
         try {
-            $payload = JWT::decode($accessToken, new Key($this->jwtSecret, 'HS256'));
+            $payload = JWT::decode($accessToken, new Key($this->config->getJwtSecret(), 'HS256')); // ✅
             $this->authRepository->revokeRefreshTokensByUserId((int)$payload->sub);
         } catch (\Exception $e) {
             // Игнорируем ошибки при логауте
         }
     }
 
+
     public function validateToken(string $token): ?object
     {
         try {
-            return JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
+            return JWT::decode($token, new Key($this->config->getJwtSecret(), 'HS256')); // ✅
         } catch (\Exception $e) {
             return null;
         }
@@ -94,7 +97,7 @@ class AuthService
             'iat' => time(),
             'exp' => time() + 3600
         ];
-        return JWT::encode($payload, $this->jwtSecret, 'HS256');
+        return JWT::encode($payload, $this->config->getJwtSecret(), 'HS256');
     }
 
     private function createRefreshToken(int $userId): string

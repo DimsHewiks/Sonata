@@ -29,12 +29,12 @@ $container->set(PDO::class, static function (): PDO {
     return new PDO(
         sprintf(
             'mysql:host=%s;port=%d;dbname=%s',
-            $_ENV['DB_HOST'] ?? '127.0.0.1',
-            $_ENV['DB_PORT'] ?? 3306,
-            $_ENV['DB_NAME'] ?? 'sonata'
+            $_ENV['DB_HOST'],
+            $_ENV['DB_PORT'] ,
+            $_ENV['DB_NAME']
         ),
-        $_ENV['DB_USER'] ?? 'root',
-        $_ENV['DB_PASSWORD'] ?? '',
+        $_ENV['DB_USER'],
+        $_ENV['DB_PASS'],
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -73,21 +73,12 @@ function registerAutoServices(Container $container, array $directories): void
             $relativePath = str_replace($dir . '/', '', $file->getPathname());
             $className = ucfirst($baseName) . '\\' . str_replace('/', '\\', substr($relativePath, 0, -4));
 
-            // Регистрируем Service и Repository автоматически
-            if (
-                str_ends_with($className, 'Service') ||
-                str_ends_with($className, 'Repository')
-            ) {
-                // Для большинства классов — просто регистрируем как есть
+            // Регистрируем ТОЛЬКО контроллеры
+            if (str_ends_with($className, 'Controller')) {
                 $container->set($className);
             }
         }
     }
 
-    $container->set(\Api\Auth\Services\AuthService::class, function ($c) {
-        return new \Api\Auth\Services\AuthService(
-            $c->get(\Api\Auth\Repositories\AuthRepository::class),
-            getenv('JWT_SECRET')
-        );
-    });
+    $container->set(\Core\Service\ConfigService::class);
 }
