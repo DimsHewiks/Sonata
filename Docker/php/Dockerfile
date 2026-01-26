@@ -13,7 +13,15 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /var/www/html
 
+RUN mkdir -p /var/www/html/var/cache && \
+    chown -R www-data:www-data /var/www/html/var/cache && \
+    chmod -R 755 /var/www/html/var/cache
+
 COPY --from=builder /app/vendor /var/www/html/vendor
+
+RUN echo "📦 Cache: create cache routes..." && \
+    cd /var/www/html && \
+    php index.php cache:build
 
 RUN echo "✅ Final image: checking vendor..." && ls -la /var/www/html/vendor
 

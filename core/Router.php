@@ -344,4 +344,13 @@ class Router
         return null;
     }
 
+    public function loadCachedRoutes(): void
+    {
+        $cacheFile = __DIR__ . '/../var/cache/routes.php';
+
+        if (file_exists($cacheFile)) {
+            $this->routes = require $cacheFile;
+        }
+    }
+
 }

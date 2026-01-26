@@ -30,7 +30,7 @@ $container->set(PDO::class, static function (): PDO {
         sprintf(
             'mysql:host=%s;port=%d;dbname=%s',
             $_ENV['DB_HOST'],
-            $_ENV['DB_PORT'] ,
+            $_ENV['DB_PORT'],
             $_ENV['DB_NAME']
         ),
         $_ENV['DB_USER'],
@@ -51,8 +51,20 @@ registerAutoServices($container, [
     __DIR__ . '/commands'
 ]);
 
-return $container;
+// Запуск команды cache:build
+if (($_SERVER['argv'][1] ?? null) === 'cache:build') {
+    $command = new \Command\CacheBuildCommand();
+    $command->execute($container);
+    exit;
+}
 
+if (($_SERVER['argv'][1] ?? null) === 'cache:clear') {
+    $command = new \Command\CacheClearCommand();
+    $command->execute();
+    exit;
+}
+
+return $container;
 
 /**
  * Регистрирует все репозитории и сервисы
@@ -73,7 +85,6 @@ function registerAutoServices(Container $container, array $directories): void
             $relativePath = str_replace($dir . '/', '', $file->getPathname());
             $className = ucfirst($baseName) . '\\' . str_replace('/', '\\', substr($relativePath, 0, -4));
 
-            // Регистрируем ТОЛЬКО контроллеры
             if (str_ends_with($className, 'Controller')) {
                 $container->set($className);
             }

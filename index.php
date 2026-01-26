@@ -15,7 +15,12 @@ $container = require __DIR__ . '/bootstrap.php';
 $debug = getenv('APP_ENV') === 'dev';
 
 $router = new Core\Router($container, $debug);
-$router->registerControllers();
+
+$router->loadCachedRoutes();
+
+if (empty($router->getRoutes())) {
+    $router->registerControllers();
+}
 
 $router->dispatch(
     parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/',
