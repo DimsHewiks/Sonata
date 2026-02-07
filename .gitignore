@@ -1,6 +1,5 @@
 vendor/
 .env
-Docker/
 .git/
 Thumbs.db
 var/cache/

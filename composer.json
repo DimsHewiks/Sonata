@@ -6,9 +6,10 @@
     "php": "^8.3",
     "ext-json": "*",
     "ext-pdo": "*",
-    "sonata/framework": "^1.1",
+    "sonata/framework": "^1.2",
     "sonata/docs": "^1.0.2",
     "firebase/php-jwt": "^7.0",
+    "ramsey/uuid": "^4.7",
     "vlucas/phpdotenv": "^5.6"
   },
   "autoload": {

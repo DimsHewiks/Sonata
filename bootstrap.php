@@ -13,6 +13,25 @@ if (file_exists(__DIR__ . '/.env')) {
     $dotenv->load();
 }
 
+$appEnv = $_ENV['APP_ENV'] ?? '';
+$corsOrigin = $_ENV['CORS_ALLOW_ORIGIN'] ?? null;
+if ($appEnv === 'dev' || $corsOrigin) {
+    $origin = $corsOrigin ?: ($_SERVER['HTTP_ORIGIN'] ?? '*');
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With');
+    header('Access-Control-Expose-Headers: Authorization');
+
+    if (!empty($_ENV['CORS_ALLOW_CREDENTIALS']) && $origin !== '*') {
+        header('Access-Control-Allow-Credentials: true');
+    }
+
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+}
+
 $_ENV['SONATA_BASE_PATH'] = $_ENV['SONATA_BASE_PATH'] ?? __DIR__;
 putenv('SONATA_BASE_PATH=' . $_ENV['SONATA_BASE_PATH']);
 

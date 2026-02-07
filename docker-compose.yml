@@ -25,6 +25,8 @@ services:
       DB_PORT: 3306
       JWT_SECRET: a-string-secret-at-least-256-bits-long
       APP_ENV: dev
+      CORS_ALLOW_ORIGIN: http://localhost:5173
+      CORS_ALLOW_CREDENTIALS: "1"
     depends_on:
       - mariadb
     networks:

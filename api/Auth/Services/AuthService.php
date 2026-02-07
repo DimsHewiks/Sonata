@@ -5,6 +5,7 @@ namespace Api\Auth\Services;
 use Api\Auth\Repositories\AuthRepository;
 use Sonata\Framework\Attributes\Inject;
 use Sonata\Framework\Service\ConfigService;
+use Ramsey\Uuid\Uuid;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -22,8 +23,8 @@ class AuthService
             return null;
         }
 
-        $accessToken = $this->generateAccessToken($user['id'], $user['email']);
-        $refreshToken = $this->createRefreshToken($user['id']);
+        $accessToken = $this->generateAccessToken($user['uuid'], $user['email']);
+        $refreshToken = $this->createRefreshToken($user['uuid']);
 
         return [
             'access_token' => $accessToken,
@@ -39,7 +40,7 @@ class AuthService
             throw new \InvalidArgumentException('Email and password are required');
         }
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $this->authRepository->createUser($email, $hash);
+        $this->authRepository->createUser($this->generateUuid(), $email, $hash);
     }
 
     public function refresh(string $refreshToken): ?array
@@ -51,10 +52,10 @@ class AuthService
             return null;
         }
 
-        $this->authRepository->revokeRefreshTokenById($record['id']);
+        $this->authRepository->revokeRefreshTokenByHash($record['token_hash']);
 
-        $newAccessToken = $this->generateAccessToken($record['user_id'], $record['email']);
-        $newRefreshToken = $this->createRefreshToken($record['user_id']);
+        $newAccessToken = $this->generateAccessToken($record['user_uuid'], $record['email']);
+        $newRefreshToken = $this->createRefreshToken($record['user_uuid']);
 
         return [
             'access_token' => $newAccessToken,
@@ -68,7 +69,7 @@ class AuthService
     {
         try {
             $payload = JWT::decode($accessToken, new Key($this->config->getJwtSecret(), 'HS256')); // ✅
-            $this->authRepository->revokeRefreshTokensByUserId((int)$payload->sub);
+            $this->authRepository->revokeRefreshTokensByUserUuid((string)$payload->sub);
         } catch (\Exception $e) {
             // Игнорируем ошибки при логауте
         }
@@ -86,11 +87,11 @@ class AuthService
 
     // --- Вспомогательные методы ---
 
-    private function generateAccessToken(int $userId, string $email): string
+    private function generateAccessToken(string $userUuid, string $email): string
     {
         $payload = [
             'iss' => 'sonata-fw',
-            'sub' => $userId,
+            'sub' => $userUuid,
             'email' => $email,
             'iat' => time(),
             'exp' => time() + 60*15
@@ -98,12 +99,17 @@ class AuthService
         return JWT::encode($payload, $this->config->getJwtSecret(), 'HS256');
     }
 
-    private function createRefreshToken(int $userId): string
+    private function createRefreshToken(string $userUuid): string
     {
         $refreshToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $refreshToken);
         $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 3600));
-        $this->authRepository->saveRefreshToken($userId, $tokenHash, $expiresAt);
+        $this->authRepository->saveRefreshToken($userUuid, $tokenHash, $expiresAt);
         return $refreshToken;
+    }
+
+    private function generateUuid(): string
+    {
+        return Uuid::uuid7()->toString();
     }
 }
