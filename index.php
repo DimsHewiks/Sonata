@@ -15,6 +15,7 @@ $container = require __DIR__ . '/bootstrap.php';
 $debug = getenv('APP_ENV') === 'dev';
 
 $router = new Sonata\Framework\Router($container, $debug, null, __DIR__);
+$router->addMiddleware(\Api\Common\Middleware\AuthMiddleware::class);
 
 $router->loadCachedRoutes();
 

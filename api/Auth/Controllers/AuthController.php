@@ -8,6 +8,7 @@ use Api\Auth\Services\AuthService;
 use Sonata\Framework\Attributes\Controller;
 use Sonata\Framework\Attributes\From;
 use Sonata\Framework\Attributes\Inject;
+use Sonata\Framework\Attributes\NoAuth;
 use Sonata\Framework\Attributes\Route;
 use Sonata\Framework\Attributes\Tag;
 use Sonata\Framework\Http\Response;
@@ -21,6 +22,7 @@ class AuthController
     ) {}
 
     #[Route(path: '/login', method: 'POST', summary: 'Вход', description: 'Метод входа в систему')]
+    #[NoAuth]
     public function login(#[From('json')] RegistDTO $dto): never
     {
         try {
@@ -66,6 +68,7 @@ class AuthController
     }
 
     #[Route(path: '/registration', method: 'POST', summary: 'Регистрация', description: 'Метод регистрации нового юзера')]
+    #[NoAuth]
     public function createAccount(): never
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -89,6 +92,7 @@ class AuthController
     }
 
     #[Route(path: '/refresh', method: 'POST', summary: 'обновление рефреша', description: 'Метод для обновления рефреша юзера')]
+    #[NoAuth]
     public function refresh(
         #[From('json')] RefreshDto $dto
     ): never

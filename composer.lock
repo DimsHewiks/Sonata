@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "739a2e0559b3bc4072be715311598ce2",
+    "content-hash": "183c28b7bb284343103409f9016f21c7",
     "packages": [
         {
             "name": "firebase/php-jwt",
@@ -478,16 +478,16 @@
         },
         {
             "name": "sonata/docs",
-            "version": "v1.0.0",
+            "version": "v1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/DimsHewiks/sonata-docs.git",
-                "reference": "7a1b84e1f28790ab608708cb306593806c770bd4"
+                "reference": "e3b4c02ace3f6050f291c0307a6186a4aa1cf563"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/DimsHewiks/sonata-docs/zipball/7a1b84e1f28790ab608708cb306593806c770bd4",
-                "reference": "7a1b84e1f28790ab608708cb306593806c770bd4",
+                "url": "https://api.github.com/repos/DimsHewiks/sonata-docs/zipball/e3b4c02ace3f6050f291c0307a6186a4aa1cf563",
+                "reference": "e3b4c02ace3f6050f291c0307a6186a4aa1cf563",
                 "shasum": ""
             },
             "require": {
@@ -510,22 +510,22 @@
             "description": "OpenAPI docs module for Sonata framework",
             "support": {
                 "issues": "https://github.com/DimsHewiks/sonata-docs/issues",
-                "source": "https://github.com/DimsHewiks/sonata-docs/tree/v1.0.0"
+                "source": "https://github.com/DimsHewiks/sonata-docs/tree/v1.0.2"
             },
-            "time": "2026-02-07T06:48:22+00:00"
+            "time": "2026-02-07T09:22:53+00:00"
         },
         {
             "name": "sonata/framework",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/DimsHewiks/sonata-framework.git",
-                "reference": "8b2cdee9a4a2ed69c442617f10888750450a5fb0"
+                "reference": "1e9d724a2f05489fd99c3684da644ff9fa06b056"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/DimsHewiks/sonata-framework/zipball/8b2cdee9a4a2ed69c442617f10888750450a5fb0",
-                "reference": "8b2cdee9a4a2ed69c442617f10888750450a5fb0",
+                "url": "https://api.github.com/repos/DimsHewiks/sonata-framework/zipball/1e9d724a2f05489fd99c3684da644ff9fa06b056",
+                "reference": "1e9d724a2f05489fd99c3684da644ff9fa06b056",
                 "shasum": ""
             },
             "require": {
@@ -549,9 +549,9 @@
             "description": "Sonata PHP framework core",
             "support": {
                 "issues": "https://github.com/DimsHewiks/sonata-framework/issues",
-                "source": "https://github.com/DimsHewiks/sonata-framework/tree/v1.0.0"
+                "source": "https://github.com/DimsHewiks/sonata-framework/tree/v1.1.0"
             },
-            "time": "2026-02-07T06:48:22+00:00"
+            "time": "2026-02-07T09:17:43+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
