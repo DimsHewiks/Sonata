@@ -1,6 +1,7 @@
 FROM composer:2 AS builder
 WORKDIR /app
 COPY composer.json composer.lock ./
+COPY packages/ ./packages/
 RUN composer install --no-dev --no-interaction --prefer-dist && echo "✅ Builder: vendor created" && ls -la vendor
 
 FROM php:8.4-fpm

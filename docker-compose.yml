@@ -24,6 +24,7 @@ services:
       DB_PASS: apppass
       DB_PORT: 3306
       JWT_SECRET: a-string-secret-at-least-256-bits-long
+      APP_ENV: dev
     depends_on:
       - mariadb
     networks:

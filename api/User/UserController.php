@@ -3,10 +3,10 @@
 namespace Api\User;
 
 use Api\User\Dto\Response\UserResponse;
-use Core\Attributes\Controller;
-use Core\Attributes\Response;
-use Core\Attributes\Route;
-use Core\Attributes\Tag;
+use Sonata\Framework\Attributes\Controller;
+use Sonata\Framework\Attributes\Response;
+use Sonata\Framework\Attributes\Route;
+use Sonata\Framework\Attributes\Tag;
 
 #[Controller(prefix: '/api')]
 #[Tag('Пользователи', 'Работа с юзерами')]

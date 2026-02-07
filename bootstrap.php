@@ -1,6 +1,8 @@
 <?php
 
-use Core\Container\Container;
+use Sonata\Framework\Container\Container;
+use Sonata\Framework\ControllerFinder;
+use Sonata\Framework\Routing\ControllerDirectoryResolver;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -10,6 +12,9 @@ if (file_exists(__DIR__ . '/.env')) {
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
 }
+
+$_ENV['SONATA_BASE_PATH'] = $_ENV['SONATA_BASE_PATH'] ?? __DIR__;
+putenv('SONATA_BASE_PATH=' . $_ENV['SONATA_BASE_PATH']);
 
 if (!getenv('JWT_SECRET')) {
     $secret = bin2hex(random_bytes(32));
@@ -45,23 +50,21 @@ $container->set(PDO::class, static function (): PDO {
 /**
  * Регистрация контролеров и сервисов
  */
-registerAutoServices($container, [
-    __DIR__ . '/api',
-    __DIR__ . '/view',
-    __DIR__ . '/commands'
-]);
+registerAutoServices($container, __DIR__);
 
-// Запуск команды cache:build
-if (($_SERVER['argv'][1] ?? null) === 'cache:build') {
-    $command = new \Command\CacheBuildCommand();
-    $command->execute($container);
-    exit;
-}
+if (!defined('SONATA_BOOTSTRAP_NO_COMMANDS')) {
+    // Запуск команды cache:build
+    if (($_SERVER['argv'][1] ?? null) === 'cache:build') {
+        $command = new \Command\CacheBuildCommand();
+        $command->execute($container);
+        exit;
+    }
 
-if (($_SERVER['argv'][1] ?? null) === 'cache:clear') {
-    $command = new \Command\CacheClearCommand();
-    $command->execute();
-    exit;
+    if (($_SERVER['argv'][1] ?? null) === 'cache:clear') {
+        $command = new \Command\CacheClearCommand();
+        $command->execute();
+        exit;
+    }
 }
 
 return $container;
@@ -69,27 +72,16 @@ return $container;
 /**
  * Регистрирует все репозитории и сервисы
  */
-function registerAutoServices(Container $container, array $directories): void
+function registerAutoServices(Container $container, string $basePath): void
 {
+    $finder = new ControllerFinder();
+    $directories = ControllerDirectoryResolver::resolve($basePath);
+
     foreach ($directories as $dir) {
-        if (!is_dir($dir)) continue;
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
-        );
-
-        foreach ($iterator as $file) {
-            if ($file->getExtension() !== 'php') continue;
-
-            $baseName = basename($dir);
-            $relativePath = str_replace($dir . '/', '', $file->getPathname());
-            $className = ucfirst($baseName) . '\\' . str_replace('/', '\\', substr($relativePath, 0, -4));
-
-            if (str_ends_with($className, 'Controller')) {
-                $container->set($className);
-            }
+        foreach ($finder->find($dir) as $controller) {
+            $container->set($controller);
         }
     }
 
-    $container->set(\Core\Service\ConfigService::class);
+    $container->set(\Sonata\Framework\Service\ConfigService::class);
 }

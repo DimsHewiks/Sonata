@@ -1,9 +1,9 @@
 <?php
 namespace Command\Cache;
 
-use Core\Attributes\Controller;
-use Core\Attributes\Route;
-use Core\Cache\RoutesCache;
+use Sonata\Framework\Attributes\Controller;
+use Sonata\Framework\Attributes\Route;
+use Sonata\Framework\Cache\RoutesCache;
 
 #[Controller(prefix: '/command/cache')]
 class CacheController

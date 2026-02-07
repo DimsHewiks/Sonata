@@ -1,8 +1,8 @@
 <?php
 namespace Api\Product;
 
-use Core\Attributes\Controller;
-use Core\Attributes\Route;
+use Sonata\Framework\Attributes\Controller;
+use Sonata\Framework\Attributes\Route;
 
 #[Controller('/api/products')]
 class ProductController

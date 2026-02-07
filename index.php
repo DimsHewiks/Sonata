@@ -14,7 +14,7 @@ $container = require __DIR__ . '/bootstrap.php';
 
 $debug = getenv('APP_ENV') === 'dev';
 
-$router = new Core\Router($container, $debug);
+$router = new Sonata\Framework\Router($container, $debug, null, __DIR__);
 
 $router->loadCachedRoutes();
 

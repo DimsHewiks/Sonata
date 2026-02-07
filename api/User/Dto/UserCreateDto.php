@@ -2,7 +2,7 @@
 
 namespace Api\User\Dto;
 
-use Core\Http\ParamsDTO;
+use Sonata\Framework\Http\ParamsDTO;
 use Symfony\Component\Validator\Constraints as Assert;
 use OpenApi\Attributes as OA;
 

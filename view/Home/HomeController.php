@@ -1,10 +1,10 @@
 <?php
 namespace View\Home;
 
-use Core\Attributes\Controller;
-use Core\Attributes\Route;
-use Core\Attributes\Tag;
-use Core\Http\Response;
+use Sonata\Framework\Attributes\Controller;
+use Sonata\Framework\Attributes\Route;
+use Sonata\Framework\Attributes\Tag;
+use Sonata\Framework\Http\Response;
 use View\Home\Pages\HomePage;
 
 

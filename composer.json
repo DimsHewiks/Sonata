@@ -1,24 +1,37 @@
 {
-  "name": "dims-hewik/sonata-fw",
-  "description": "Custom PHP Framework",
+  "name": "dims-hewik/sonata-app",
+  "description": "Sonata demo application",
   "type": "project",
   "require": {
-    "php": "^8.4",
+    "php": "^8.3",
     "ext-json": "*",
     "ext-pdo": "*",
-    "firebase/php-jwt": "^7.0",
-    "symfony/validator": "8.0",
-    "vlucas/phpdotenv": "^5.6",
-    "zircote/swagger-php": "^6.0"
+    "sonata/framework": "^1.0",
+    "sonata/jwt-auth": "^1.0",
+    "sonata/docs": "^1.0",
+    "vlucas/phpdotenv": "^5.6"
   },
   "autoload": {
     "psr-4": {
       "Api\\": "api/",
-      "Core\\": "core/",
       "View\\": "view/",
       "Command\\": "commands/"
     }
   },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "packages/framework"
+    },
+    {
+      "type": "path",
+      "url": "packages/jwt-auth"
+    },
+    {
+      "type": "path",
+      "url": "packages/docs"
+    }
+  ],
   "config": {
     "optimize-autoloader": true,
     "sort-packages": true

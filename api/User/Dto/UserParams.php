@@ -2,7 +2,7 @@
 
 namespace Api\User\Dto;
 
-use Core\Http\ParamsDTO;
+use Sonata\Framework\Http\ParamsDTO;
 
 class UserParams extends ParamsDTO
 {

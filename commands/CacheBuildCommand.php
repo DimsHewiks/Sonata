@@ -2,8 +2,8 @@
 
 namespace Command;
 
-use Core\Router;
-use Core\Container\ContainerInterface;
+use Sonata\Framework\Router;
+use Sonata\Framework\Container\ContainerInterface;
 
 class CacheBuildCommand
 {
@@ -11,7 +11,8 @@ class CacheBuildCommand
     {
         echo "📦 Building cache...\n";
 
-        $router = new Router($container, false);
+        $basePath = dirname(__DIR__);
+        $router = new Router($container, false, null, $basePath);
         $router->registerControllers();
 
         $routes = $router->getRoutes();
