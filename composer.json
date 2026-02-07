@@ -7,8 +7,8 @@
     "ext-json": "*",
     "ext-pdo": "*",
     "sonata/framework": "^1.0",
-    "sonata/jwt-auth": "^1.0",
     "sonata/docs": "^1.0",
+    "firebase/php-jwt": "^7.0",
     "vlucas/phpdotenv": "^5.6"
   },
   "autoload": {

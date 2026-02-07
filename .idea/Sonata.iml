@@ -27,8 +27,6 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/vlucas/phpdotenv" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/zircote/swagger-php" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/sonata/docs" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/sonata/framework" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/sonata/jwt-auth" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/polyfill-php83" />
     </content>
     <orderEntry type="inheritedJdk" />

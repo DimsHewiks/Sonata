@@ -11,12 +11,6 @@ switch ($command) {
         (new Sonata\Framework\Cache\RoutesCache())->clear();
         echo "Routes cache cleared!\n";
         break;
-    case 'jwt:install':
-        $container = require __DIR__ . '/../bootstrap.php';
-        $pdo = $container->get(PDO::class);
-        (new Sonata\JwtAuth\Migrations\JwtMigrator())->install($pdo);
-        echo "JWT migrations installed!\n";
-        break;
     default:
-        echo "Available commands:\n cache:clear\n jwt:install\n";
+        echo "Available commands:\n cache:clear\n";
 }

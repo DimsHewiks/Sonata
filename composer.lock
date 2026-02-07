@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dbf66d96f2e8160362dce0b48cab3384",
+    "content-hash": "739a2e0559b3bc4072be715311598ce2",
     "packages": [
         {
             "name": "firebase/php-jwt",
@@ -550,45 +550,6 @@
             "support": {
                 "issues": "https://github.com/DimsHewiks/sonata-framework/issues",
                 "source": "https://github.com/DimsHewiks/sonata-framework/tree/v1.0.0"
-            },
-            "time": "2026-02-07T06:48:22+00:00"
-        },
-        {
-            "name": "sonata/jwt-auth",
-            "version": "v1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/DimsHewiks/sonata-jwt-auth.git",
-                "reference": "d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/DimsHewiks/sonata-jwt-auth/zipball/d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d",
-                "reference": "d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d",
-                "shasum": ""
-            },
-            "require": {
-                "ext-pdo": "*",
-                "firebase/php-jwt": "^7.0",
-                "php": "^8.3",
-                "sonata/framework": "^1.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-main": "1.0.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Sonata\\JwtAuth\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "description": "JWT auth module for Sonata framework",
-            "support": {
-                "issues": "https://github.com/DimsHewiks/sonata-jwt-auth/issues",
-                "source": "https://github.com/DimsHewiks/sonata-jwt-auth/tree/v1.0.0"
             },
             "time": "2026-02-07T06:48:22+00:00"
         },
