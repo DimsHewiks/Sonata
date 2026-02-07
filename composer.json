@@ -18,20 +18,6 @@
       "Command\\": "commands/"
     }
   },
-  "repositories": [
-    {
-      "type": "path",
-      "url": "packages/framework"
-    },
-    {
-      "type": "path",
-      "url": "packages/jwt-auth"
-    },
-    {
-      "type": "path",
-      "url": "packages/docs"
-    }
-  ],
   "config": {
     "optimize-autoloader": true,
     "sort-packages": true

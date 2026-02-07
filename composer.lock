@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "663261378f1db161b8875abedeae193e",
+    "content-hash": "dbf66d96f2e8160362dce0b48cab3384",
     "packages": [
         {
             "name": "firebase/php-jwt",
@@ -478,11 +478,17 @@
         },
         {
             "name": "sonata/docs",
-            "version": "dev-main",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/DimsHewiks/sonata-docs.git",
+                "reference": "7a1b84e1f28790ab608708cb306593806c770bd4"
+            },
             "dist": {
-                "type": "path",
-                "url": "packages/docs",
-                "reference": "4d52a672036e76b1aa05e569ba0bee531aa14a26"
+                "type": "zip",
+                "url": "https://api.github.com/repos/DimsHewiks/sonata-docs/zipball/7a1b84e1f28790ab608708cb306593806c770bd4",
+                "reference": "7a1b84e1f28790ab608708cb306593806c770bd4",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.3",
@@ -500,18 +506,27 @@
                     "Sonata\\Docs\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "description": "OpenAPI docs module for Sonata framework",
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/DimsHewiks/sonata-docs/issues",
+                "source": "https://github.com/DimsHewiks/sonata-docs/tree/v1.0.0"
+            },
+            "time": "2026-02-07T06:48:22+00:00"
         },
         {
             "name": "sonata/framework",
-            "version": "dev-main",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/DimsHewiks/sonata-framework.git",
+                "reference": "8b2cdee9a4a2ed69c442617f10888750450a5fb0"
+            },
             "dist": {
-                "type": "path",
-                "url": "packages/framework",
-                "reference": "6df9d611091ba8f79e2881eb920608e9ad86edf8"
+                "type": "zip",
+                "url": "https://api.github.com/repos/DimsHewiks/sonata-framework/zipball/8b2cdee9a4a2ed69c442617f10888750450a5fb0",
+                "reference": "8b2cdee9a4a2ed69c442617f10888750450a5fb0",
+                "shasum": ""
             },
             "require": {
                 "ext-json": "*",
@@ -530,18 +545,27 @@
                     "Sonata\\Framework\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "description": "Sonata PHP framework core",
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/DimsHewiks/sonata-framework/issues",
+                "source": "https://github.com/DimsHewiks/sonata-framework/tree/v1.0.0"
+            },
+            "time": "2026-02-07T06:48:22+00:00"
         },
         {
             "name": "sonata/jwt-auth",
-            "version": "dev-main",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/DimsHewiks/sonata-jwt-auth.git",
+                "reference": "d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d"
+            },
             "dist": {
-                "type": "path",
-                "url": "packages/jwt-auth",
-                "reference": "b794fdd8b988570961a29d0f0b05752a0b5ce8f8"
+                "type": "zip",
+                "url": "https://api.github.com/repos/DimsHewiks/sonata-jwt-auth/zipball/d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d",
+                "reference": "d01b5fcc160b663b32e380dcc3ec5030c3d3cb8d",
+                "shasum": ""
             },
             "require": {
                 "ext-pdo": "*",
@@ -560,10 +584,13 @@
                     "Sonata\\JwtAuth\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "description": "JWT auth module for Sonata framework",
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/DimsHewiks/sonata-jwt-auth/issues",
+                "source": "https://github.com/DimsHewiks/sonata-jwt-auth/tree/v1.0.0"
+            },
+            "time": "2026-02-07T06:48:22+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
