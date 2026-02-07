@@ -3,3 +3,4 @@ vendor/
 Docker/
 .git/
 Thumbs.db
+var/cache/
