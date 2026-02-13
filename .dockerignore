@@ -1,4 +1,7 @@
 vendor/
 Docker/
+!Docker/
+!Docker/php/
+!Docker/php/uploads.ini
 .git/
 .env

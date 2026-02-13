@@ -2,6 +2,7 @@
 
 namespace Api\Auth\Controllers;
 
+use Api\Auth\Auth;
 use Api\Auth\DTOs\Request\LoginDTO;
 use Api\Auth\DTOs\Request\RegisterDTO;
 use Api\Auth\Services\AuthService;
@@ -55,21 +56,7 @@ class AuthController
     #[ResponseAttr(UserFullDto::class)]
     public function profile(): never
     {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            http_response_code(401);
-
-            Response::error('Missing token');
-        }
-
-        $payload = $this->authService->validateToken($matches[1]);
-        if (!$payload) {
-            http_response_code(401);
-
-            Response::error('Invalid token');
-        }
-
-        $profile = $this->authService->getProfile((string)$payload->sub);
+        $profile = $this->authService->getProfile(Auth::getOrThrow()->uuid);
         if (!$profile) {
             Response::error('User not found', 404);
         }

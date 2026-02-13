@@ -2,6 +2,8 @@
 
 namespace Api\Common\Middleware;
 
+use Api\Auth\Auth;
+use Api\Auth\AuthUser;
 use Api\Auth\Services\AuthService;
 use Sonata\Framework\Attributes\NoAuth;
 use Sonata\Framework\Http\Response;
@@ -19,6 +21,7 @@ class AuthMiddleware implements MiddlewareInterface
         $action = $context['action'] ?? null;
 
         if ($controller && $action && $this->isNoAuth($controller, $action)) {
+            Auth::clear();
             return $next($context);
         }
 
@@ -32,7 +35,16 @@ class AuthMiddleware implements MiddlewareInterface
             Response::error('Invalid token', 401);
         }
 
-        return $next($context);
+        Auth::set(new AuthUser(
+            uuid: (string)$payload->sub,
+            email: isset($payload->email) ? (string)$payload->email : null
+        ));
+
+        try {
+            return $next($context);
+        } finally {
+            Auth::clear();
+        }
     }
 
     private function isNoAuth(string $controller, string $action): bool

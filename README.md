@@ -37,3 +37,6 @@ php bin/console jwt:install
 - Быстрое создание роутов на базе внутренних атрибутов
 
 # Структура проекта 
+
+## Документация для frontend
+- `docs/frontend-api.md` — актуальный контракт по auth и feed API.
