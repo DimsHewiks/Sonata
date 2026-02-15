@@ -26,6 +26,14 @@ class FeedRepository
         $stmt->execute([$feedItemUuid, $userUuid, $wallUserUuid, $type, $text, $payloadJson]);
     }
 
+    public function updateFeedItemPayload(string $feedItemUuid, ?string $payloadJson): void
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE feed_items SET payload_json = ? WHERE uuid = UUID_TO_BIN(?)"
+        );
+        $stmt->execute([$payloadJson, $feedItemUuid]);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $mediaItems
      */
@@ -437,5 +445,30 @@ class FeedRepository
         );
         $stmt->execute($feedItemUuids);
         return $stmt->fetchAll();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function findPostMediaForUser(string $userUuid, int $limit = 200): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT
+                BIN_TO_UUID(fi.uuid) AS feed_item_uuid,
+                fim.relative_path,
+                fim.extension,
+                fim.created_at
+            FROM feed_item_media fim
+            JOIN feed_items fi ON fi.uuid = fim.feed_item_uuid
+            WHERE fi.user_uuid = UUID_TO_BIN(?)
+              AND fi.type = 'post'
+              AND fim.extension IN ('jpg','jpeg','png','webp','gif')
+            ORDER BY fim.created_at DESC
+            LIMIT ?"
+        );
+        $stmt->bindValue(1, $userUuid);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll() ?: [];
     }
 }

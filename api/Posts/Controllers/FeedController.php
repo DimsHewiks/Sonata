@@ -13,6 +13,7 @@ use Api\Posts\DTOs\Response\DeleteFeedResponse;
 use Api\Posts\DTOs\Response\CommentCreateResponse;
 use Api\Posts\DTOs\Response\CommentListResponse;
 use Api\Posts\DTOs\Response\CommentDeleteResponse;
+use Api\Posts\DTOs\Response\PostMediaListResponse;
 use Api\Posts\Services\FeedService;
 use Sonata\Framework\Attributes\Controller;
 use Sonata\Framework\Attributes\From;
@@ -158,6 +159,17 @@ class FeedController
             Response::error($e->getMessage(), $status);
         } catch (\Throwable $e) {
             Response::error('Failed to delete feed item', 500, $e->getMessage());
+        }
+    }
+
+    #[Route(path: '/feed/media', method: 'GET', summary: 'Медиа из постов пользователя')]
+    #[ResponseAttr(PostMediaListResponse::class)]
+    public function listMyPostMedia(): PostMediaListResponse
+    {
+        try {
+            return $this->feedService->getMyPostMedia();
+        } catch (\Throwable $e) {
+            Response::error('Failed to load post media', 500, $e->getMessage());
         }
     }
 }

@@ -30,8 +30,75 @@ CREATE TABLE IF NOT EXISTS users (
                                      age INT NOT NULL,
                                      login VARCHAR(100) NOT NULL UNIQUE,
                                      email VARCHAR(255) NULL UNIQUE,
+                                     profile_description TEXT NULL,
                                      password_hash VARCHAR(255) NOT NULL,
                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS article_media (
+                                     uuid BINARY(16) PRIMARY KEY,
+                                     original_name VARCHAR(255) NOT NULL,
+                                     saved_name VARCHAR(255) NOT NULL,
+                                     full_path VARCHAR(1024) NULL,
+                                     relative_path VARCHAR(1024) NOT NULL,
+                                     size BIGINT NOT NULL DEFAULT 0,
+                                     extension VARCHAR(20) NOT NULL,
+                                     width INT NULL,
+                                     height INT NULL,
+                                     uploaded TINYINT(1) NOT NULL DEFAULT 1,
+                                     errors TEXT NULL,
+                                     kind ENUM('cover','image') NOT NULL DEFAULT 'image',
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS articles (
+                                     uuid BINARY(16) PRIMARY KEY,
+                                     author_uuid BINARY(16) NOT NULL,
+                                     title VARCHAR(150) NOT NULL,
+                                     type ENUM('text','song') NOT NULL,
+                                     format VARCHAR(20) NOT NULL DEFAULT 'markdown',
+                                     body LONGTEXT NOT NULL,
+                                     excerpt TEXT NULL,
+                                     status ENUM('draft','published','archived') NOT NULL DEFAULT 'draft',
+                                     cover_media_uuid BINARY(16) NULL,
+                                     cover_position LONGTEXT NULL,
+                                     embeds LONGTEXT NULL,
+                                     chords_notation ENUM('standard','german') NULL,
+                                     feed_item_uuid BINARY(16) NULL,
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                     published_at TIMESTAMP NULL,
+                                     INDEX idx_articles_author (author_uuid),
+                                     INDEX idx_articles_status (status),
+                                     INDEX idx_articles_feed_item (feed_item_uuid),
+                                     CONSTRAINT fk_articles_author
+                                         FOREIGN KEY (author_uuid) REFERENCES users(uuid)
+                                         ON DELETE CASCADE,
+                                     CONSTRAINT fk_articles_cover
+                                         FOREIGN KEY (cover_media_uuid) REFERENCES article_media(uuid)
+                                         ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS instruments (
+                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                     name VARCHAR(100) NOT NULL UNIQUE,
+                                     sticker VARCHAR(100) NULL,
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_instruments (
+                                     user_uuid BINARY(16) NOT NULL,
+                                     instrument_id BIGINT NOT NULL,
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                     PRIMARY KEY (user_uuid, instrument_id),
+                                     INDEX idx_user_instruments_user (user_uuid),
+                                     INDEX idx_user_instruments_instrument (instrument_id),
+                                     CONSTRAINT fk_user_instruments_user
+                                         FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+                                         ON DELETE CASCADE,
+                                     CONSTRAINT fk_user_instruments_instrument
+                                         FOREIGN KEY (instrument_id) REFERENCES instruments(id)
+                                         ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS users_avatars (
@@ -53,6 +120,16 @@ CREATE TABLE IF NOT EXISTS users_avatars (
                                          FOREIGN KEY (user_uuid) REFERENCES users(uuid)
                                          ON DELETE CASCADE
 );
+
+INSERT IGNORE INTO instruments (name, sticker) VALUES
+    ('Гитара', 'guitar'),
+    ('Электрогитара', 'electric-guitar'),
+    ('Пианино', 'piano'),
+    ('Барабаны', 'drums'),
+    ('Басс', 'bass'),
+    ('Вокал', 'microphone'),
+    ('Аккордеон', 'accordion'),
+    ('Баян', 'bayan');
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
                                      user_uuid BINARY(16) NOT NULL,

@@ -78,6 +78,16 @@ class AuthRepository
         ]);
     }
 
+    public function deactivateUserAvatars(string $userUuid): void
+    {
+        $stmt = $this->pdo->prepare("
+            UPDATE users_avatars
+            SET status = 0
+            WHERE user_uuid = UUID_TO_BIN(?)
+        ");
+        $stmt->execute([$userUuid]);
+    }
+
     public function saveRefreshToken(string $userUuid, string $tokenHash, string $expiresAt): void
     {
         $stmt = $this->pdo->prepare("
@@ -122,6 +132,7 @@ class AuthRepository
                 u.age,
                 u.login,
                 u.email,
+                u.profile_description,
                 (
                     SELECT ua.relative_path
                     FROM users_avatars ua
@@ -136,5 +147,15 @@ class AuthRepository
         ");
         $stmt->execute([$userUuid]);
         return $stmt->fetch() ?: null;
+    }
+
+    public function updateProfileDescription(string $userUuid, ?string $description): void
+    {
+        $stmt = $this->pdo->prepare("
+            UPDATE users
+            SET profile_description = ?
+            WHERE uuid = UUID_TO_BIN(?)
+        ");
+        $stmt->execute([$description, $userUuid]);
     }
 }

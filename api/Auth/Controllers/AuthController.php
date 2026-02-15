@@ -6,6 +6,8 @@ use Api\Auth\Auth;
 use Api\Auth\DTOs\Request\LoginDTO;
 use Api\Auth\DTOs\Request\RegisterDTO;
 use Api\Auth\Services\AuthService;
+use Api\User\Dto\Request\ProfileDescriptionUpdateDto;
+use Api\User\Dto\Response\UserAvatarDto;
 use Api\User\Dto\Response\UserFullDto;
 use Sonata\Framework\MediaHelper\MediaHelper;
 use Sonata\Framework\Attributes\Controller;
@@ -62,6 +64,56 @@ class AuthController
         }
 
         Response::json($profile, 200);
+    }
+
+    #[Route(path: '/me/description', method: 'PUT', summary: 'Описание профиля', description: 'Обновление описания профиля')]
+    public function updateProfileDescription(#[From('json')] ProfileDescriptionUpdateDto $dto): never
+    {
+        try {
+            $this->authService->updateProfileDescription(Auth::getOrThrow()->uuid, $dto->description);
+            Response::json([
+                'message' => 'Описание обновлено'
+            ]);
+        } catch (\RuntimeException $e) {
+            $status = $e->getMessage() === 'Unauthorized' ? 401 : 500;
+            Response::error($e->getMessage(), $status);
+        } catch (\Throwable $e) {
+            Response::error('Failed to update profile description', 500, $e->getMessage());
+        }
+    }
+
+    #[Route(path: '/me/avatar', method: 'POST', summary: 'Обновление аватара')]
+    #[ResponseAttr(UserAvatarDto::class)]
+    public function updateAvatar(): UserAvatarDto
+    {
+        try {
+            $media = new MediaHelper('/avatars');
+            if (!$media->existFile('avatar')) {
+                Response::error('Avatar file is required', 400);
+            }
+
+            $media->setNames(['avatar']);
+            $uploadResult = $media->import();
+            $avatarData = $uploadResult['avatar'] ?? null;
+            if (!$avatarData) {
+                Response::error('Avatar upload failed', 400);
+            }
+
+            $relativePath = $this->authService->updateAvatar(Auth::getOrThrow()->uuid, $avatarData);
+            if (!$relativePath) {
+                Response::error('Failed to save avatar', 500);
+            }
+
+            $dto = new UserAvatarDto();
+            $dto->relativePath = (string)$relativePath;
+            $dto->extension = strtolower((string)($avatarData['extension'] ?? ''));
+            return $dto;
+        } catch (\RuntimeException $e) {
+            $status = $e->getMessage() === 'Unauthorized' ? 401 : 500;
+            Response::error($e->getMessage(), $status);
+        } catch (\Throwable $e) {
+            Response::error('Failed to update avatar', 500, $e->getMessage());
+        }
     }
 
     #[Route(path: '/registration', method: 'POST', summary: 'Регистрация', description: 'Метод регистрации нового юзера')]

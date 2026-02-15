@@ -72,4 +72,13 @@ class FeedItemDto
 
     #[OA\Property(example: "4 min")]
     public ?string $readTime = null;
+
+    #[OA\Property(example: "article-550e8400-e29b-41d4-a716-446655440000")]
+    public ?string $articleId = null;
+
+    #[OA\Property(example: "song")]
+    public ?string $articleType = null;
+
+    #[OA\Property(ref: "#/components/schemas/FeedCover")]
+    public ?FeedCoverDto $cover = null;
 }

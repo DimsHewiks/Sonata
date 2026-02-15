@@ -2,6 +2,7 @@
 
 namespace Api\User\Dto\Response;
 
+use Api\Instruments\Dto\InstrumentDto;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(title: "UserFull", description: "Полный профиль пользователя")]
@@ -24,4 +25,13 @@ class UserFullDto
 
     #[OA\Property(example: "upload/avatars/avatar.webp")]
     public ?string $avatarPath = null;
+
+    #[OA\Property(example: "Играю в рок-группе, ищу клавишника")]
+    public ?string $description = null;
+
+    /**
+     * @var array<int, InstrumentDto>
+     */
+    #[OA\Property(type: "array", items: new OA\Items(ref: "#/components/schemas/Instrument"))]
+    public array $instruments = [];
 }

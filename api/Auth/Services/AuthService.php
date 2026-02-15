@@ -3,6 +3,8 @@
 namespace Api\Auth\Services;
 
 use Api\Auth\Repositories\AuthRepository;
+use Api\Instruments\Dto\InstrumentDto;
+use Api\Instruments\Repositories\InstrumentRepository;
 use Api\User\Dto\Response\UserFullDto;
 use Sonata\Framework\Attributes\Inject;
 use Sonata\Framework\Service\ConfigService;
@@ -14,6 +16,7 @@ class AuthService
 {
     public function __construct(
         #[Inject] private AuthRepository $authRepository,
+        #[Inject] private InstrumentRepository $instrumentRepository,
         #[Inject] private ConfigService $config
     ) {}
 
@@ -56,6 +59,14 @@ class AuthService
             $status = !empty($avatar['uploaded']) ? 1 : 0;
             $this->authRepository->createUserAvatar($uuid, $avatar, $status);
         }
+    }
+
+    public function updateAvatar(string $userUuid, array $avatar): ?string
+    {
+        $this->authRepository->deactivateUserAvatars($userUuid);
+        $status = !empty($avatar['uploaded']) ? 1 : 0;
+        $this->authRepository->createUserAvatar($userUuid, $avatar, $status);
+        return $avatar['relative_path'] ?? null;
     }
 
     public function refreshFromRequest(): ?array
@@ -128,6 +139,7 @@ class AuthService
             return null;
         }
 
+        $instrumentRows = $this->instrumentRepository->findByUserUuid($userUuid);
         $dto = new UserFullDto();
         $dto->uuid = $row['uuid'];
         $dto->name = $row['name'];
@@ -135,8 +147,25 @@ class AuthService
         $dto->login = $row['login'];
         $dto->email = $row['email'] ?? null;
         $dto->avatarPath = $row['avatar_path'] ?? null;
+        $dto->description = $row['profile_description'] ?? null;
+        foreach ($instrumentRows as $instrumentRow) {
+            $instrument = new InstrumentDto();
+            $instrument->id = (int)$instrumentRow['id'];
+            $instrument->name = (string)$instrumentRow['name'];
+            $instrument->sticker = $instrumentRow['sticker'] !== null ? (string)$instrumentRow['sticker'] : null;
+            $dto->instruments[] = $instrument;
+        }
 
         return $dto;
+    }
+
+    public function updateProfileDescription(string $userUuid, ?string $description): void
+    {
+        $normalized = $description !== null ? trim($description) : null;
+        if ($normalized === '') {
+            $normalized = null;
+        }
+        $this->authRepository->updateProfileDescription($userUuid, $normalized);
     }
 
     // --- Вспомогательные методы ---

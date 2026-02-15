@@ -16,11 +16,14 @@ use Api\Posts\DTOs\Response\DeleteFeedResponse;
 use Api\Posts\DTOs\Response\FeedAuthorDto;
 use Api\Posts\DTOs\Response\FeedAvatarDto;
 use Api\Posts\DTOs\Response\FeedCreateResponse;
+use Api\Posts\DTOs\Response\FeedCoverDto;
 use Api\Posts\DTOs\Response\FeedItemDto;
 use Api\Posts\DTOs\Response\FeedListResponse;
 use Api\Posts\DTOs\Response\FeedMediaDto;
 use Api\Posts\DTOs\Response\FeedOptionDto;
 use Api\Posts\DTOs\Response\FeedStatsDto;
+use Api\Posts\DTOs\Response\PostMediaDto;
+use Api\Posts\DTOs\Response\PostMediaListResponse;
 use Api\Posts\DTOs\Response\QuizAnswerResponse;
 use Api\Posts\DTOs\Response\QuizAnswerResultDto;
 use Api\Posts\Repositories\FeedRepository;
@@ -205,6 +208,21 @@ class FeedService
         $response = new DeleteFeedResponse();
         $response->deleted = true;
         $response->feedId = $type . '-' . $feedItemUuid;
+        return $response;
+    }
+
+    public function getMyPostMedia(int $limit = 200): PostMediaListResponse
+    {
+        $authUser = Auth::getOrThrow();
+        $rows = $this->feedRepository->findPostMediaForUser($authUser->uuid, $limit);
+        $response = new PostMediaListResponse();
+        foreach ($rows as $row) {
+            $dto = new PostMediaDto();
+            $dto->relative_path = (string)$row['relative_path'];
+            $dto->extension = strtolower((string)$row['extension']);
+            $dto->feedId = 'post-' . (string)$row['feed_item_uuid'];
+            $response->items[] = $dto;
+        }
         return $response;
     }
 
@@ -683,8 +701,26 @@ class FeedService
 
         if ($type === 'article') {
             $item->title = isset($payload['title']) ? (string)$payload['title'] : null;
-            $item->description = isset($payload['description']) ? (string)$payload['description'] : null;
+            if (isset($payload['excerpt'])) {
+                $item->description = (string)$payload['excerpt'];
+            } elseif (isset($payload['description'])) {
+                $item->description = (string)$payload['description'];
+            }
             $item->readTime = isset($payload['readTime']) ? (string)$payload['readTime'] : null;
+            $item->articleId = isset($payload['articleId']) ? (string)$payload['articleId'] : null;
+            $item->articleType = isset($payload['articleType']) ? (string)$payload['articleType'] : null;
+            if (isset($payload['cover']) && is_array($payload['cover'])) {
+                $cover = $payload['cover'];
+                if (!empty($cover['relative_path']) && !empty($cover['extension'])) {
+                    $coverDto = new FeedCoverDto();
+                    $coverDto->relative_path = (string)$cover['relative_path'];
+                    $coverDto->extension = strtolower((string)$cover['extension']);
+                    $coverDto->position = isset($cover['position']) && is_array($cover['position'])
+                        ? $cover['position']
+                        : null;
+                    $item->cover = $coverDto;
+                }
+            }
         }
     }
 
