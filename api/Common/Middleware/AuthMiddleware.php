@@ -21,8 +21,13 @@ class AuthMiddleware implements MiddlewareInterface
         $action = $context['action'] ?? null;
 
         if ($controller && $action && $this->isNoAuth($controller, $action)) {
-            Auth::clear();
-            return $next($context);
+            $this->authenticateOptional();
+
+            try {
+                return $next($context);
+            } finally {
+                Auth::clear();
+            }
         }
 
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
@@ -45,6 +50,26 @@ class AuthMiddleware implements MiddlewareInterface
         } finally {
             Auth::clear();
         }
+    }
+
+    private function authenticateOptional(): void
+    {
+        Auth::clear();
+
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!preg_match('/Bearer\\s+(.*)$/i', $authHeader, $matches)) {
+            return;
+        }
+
+        $payload = $this->authService->validateToken($matches[1]);
+        if (!$payload || !isset($payload->sub)) {
+            return;
+        }
+
+        Auth::set(new AuthUser(
+            uuid: (string)$payload->sub,
+            email: isset($payload->email) ? (string)$payload->email : null
+        ));
     }
 
     private function isNoAuth(string $controller, string $action): bool

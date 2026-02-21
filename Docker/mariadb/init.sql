@@ -254,3 +254,19 @@ CREATE TABLE IF NOT EXISTS feed_comment_media (
                                          FOREIGN KEY (comment_uuid) REFERENCES feed_comments(uuid)
                                          ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS comment_reactions (
+                                     comment_id BINARY(16) NOT NULL,
+                                     user_id BINARY(16) NOT NULL,
+                                     emoji VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                     UNIQUE KEY uniq_comment_reaction (comment_id, user_id, emoji),
+                                     INDEX idx_comment_reactions_comment (comment_id),
+                                     INDEX idx_comment_reactions_user (user_id),
+                                     CONSTRAINT fk_comment_reactions_comment
+                                         FOREIGN KEY (comment_id) REFERENCES feed_comments(uuid)
+                                         ON DELETE CASCADE,
+                                     CONSTRAINT fk_comment_reactions_user
+                                         FOREIGN KEY (user_id) REFERENCES users(uuid)
+                                         ON DELETE CASCADE
+);

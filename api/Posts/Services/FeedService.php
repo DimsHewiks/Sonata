@@ -4,6 +4,7 @@ namespace Api\Posts\Services;
 
 use Api\Auth\Auth;
 use Api\Posts\DTOs\Request\CommentCreateDTO;
+use Api\Posts\DTOs\Request\CommentReactionToggleDTO;
 use Api\Posts\DTOs\Request\CommentsQueryDTO;
 use Api\Posts\DTOs\Request\FeedCreateDTO;
 use Api\Posts\DTOs\Request\QuizAnswerDTO;
@@ -12,6 +13,8 @@ use Api\Posts\DTOs\Response\CommentDeleteResponse;
 use Api\Posts\DTOs\Response\CommentDto;
 use Api\Posts\DTOs\Response\CommentListResponse;
 use Api\Posts\DTOs\Response\CommentMediaDto;
+use Api\Posts\DTOs\Response\CommentReactionDto;
+use Api\Posts\DTOs\Response\CommentReactionToggleResponse;
 use Api\Posts\DTOs\Response\DeleteFeedResponse;
 use Api\Posts\DTOs\Response\FeedAuthorDto;
 use Api\Posts\DTOs\Response\FeedAvatarDto;
@@ -33,6 +36,10 @@ use Sonata\Framework\MediaHelper\MediaHelper;
 
 class FeedService
 {
+    private const DEFAULT_FEED_LIMIT = 20;
+    private const MAX_FEED_LIMIT = 100;
+    private const MAX_REACTIONS_PER_COMMENT_PER_USER = 2;
+
     public function __construct(
         #[Inject] private FeedRepository $feedRepository
     ) {}
@@ -95,18 +102,41 @@ class FeedService
         return $response;
     }
 
-    public function getFeed(int $limit = 50): FeedListResponse
+    public function getFeed(int $limit = self::DEFAULT_FEED_LIMIT, int $offset = 0): FeedListResponse
     {
         $authUser = Auth::getOrThrow();
-        $rows = $this->feedRepository->findFeedItemsForUser($authUser->uuid, $limit);
+        $limit = $this->normalizePageLimit($limit);
+        $offset = $this->normalizePageOffset($offset);
+        $rows = $this->feedRepository->findFeedItemsForUser($authUser->uuid, $limit, $offset);
+        return $this->buildFeedListResponse($rows, $authUser->uuid);
+    }
 
+    public function getGlobalFeed(int $limit = self::DEFAULT_FEED_LIMIT, int $offset = 0): FeedListResponse
+    {
+        $authUser = Auth::get();
+        $limit = $this->normalizePageLimit($limit);
+        $offset = $this->normalizePageOffset($offset);
+        $rows = $this->feedRepository->findFeedItemsGlobal($limit, $offset);
+        return $this->buildFeedListResponse($rows, $authUser?->uuid);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     */
+    private function buildFeedListResponse(array $rows, ?string $viewerUuid): FeedListResponse
+    {
         $quizUuids = [];
         foreach ($rows as $row) {
             if (($row['type'] ?? '') === 'quiz') {
                 $quizUuids[] = (string)$row['feed_item_uuid'];
             }
         }
-        $quizAnswers = $this->feedRepository->findQuizAnswersByItemUuidsForUser($quizUuids, $authUser->uuid);
+
+        $quizAnswers = [];
+        if ($viewerUuid !== null && !empty($quizUuids)) {
+            $quizAnswers = $this->feedRepository->findQuizAnswersByItemUuidsForUser($quizUuids, $viewerUuid);
+        }
+
         $quizAnswerByItemUuid = [];
         foreach ($quizAnswers as $answerRow) {
             $quizAnswerByItemUuid[(string)$answerRow['feed_item_uuid']] = $answerRow;
@@ -135,6 +165,24 @@ class FeedService
         $response = new FeedListResponse();
         $response->items = $items;
         return $response;
+    }
+
+    private function normalizePageLimit(int $limit): int
+    {
+        if ($limit < 1) {
+            return self::DEFAULT_FEED_LIMIT;
+        }
+
+        if ($limit > self::MAX_FEED_LIMIT) {
+            return self::MAX_FEED_LIMIT;
+        }
+
+        return $limit;
+    }
+
+    private function normalizePageOffset(int $offset): int
+    {
+        return max(0, $offset);
     }
 
     public function submitQuizAnswer(QuizAnswerDTO $dto): QuizAnswerResponse
@@ -274,7 +322,7 @@ class FeedService
         }
 
         $media = $this->feedRepository->findCommentMediaByCommentUuids([$commentUuid]);
-        $item = $this->mapCommentRowToDto($row, $this->groupCommentMedia($media)[$commentUuid] ?? []);
+        $item = $this->mapCommentRowToDto($row, $this->groupCommentMedia($media)[$commentUuid] ?? [], []);
 
         $response = new CommentCreateResponse();
         $response->item = $item;
@@ -283,7 +331,6 @@ class FeedService
 
     public function getComments(string $feedId, CommentsQueryDTO $dto): CommentListResponse
     {
-        $authUser = Auth::getOrThrow();
         $feedItemUuid = $this->normalizeFeedItemUuid($feedId, null);
 
         $feedRow = $this->feedRepository->findFeedItemByUuid($feedItemUuid);
@@ -295,13 +342,20 @@ class FeedService
         $rows = $this->feedRepository->findCommentsByFeedItemUuid($feedItemUuid, $order);
         $commentUuids = array_map(static fn(array $r): string => (string)$r['comment_uuid'], $rows);
         $mediaRows = $this->feedRepository->findCommentMediaByCommentUuids($commentUuids);
+        $viewerUuid = Auth::get()?->uuid;
+        $reactionRows = $this->feedRepository->findCommentReactionsByCommentUuids($commentUuids, $viewerUuid);
         $mediaByComment = $this->groupCommentMedia($mediaRows);
+        $reactionsByComment = $this->groupCommentReactions($reactionRows);
 
         $byUuid = [];
         $topLevel = [];
         foreach ($rows as $row) {
             $uuid = (string)$row['comment_uuid'];
-            $comment = $this->mapCommentRowToDto($row, $mediaByComment[$uuid] ?? []);
+            $comment = $this->mapCommentRowToDto(
+                $row,
+                $mediaByComment[$uuid] ?? [],
+                $reactionsByComment[$uuid] ?? []
+            );
             $byUuid[$uuid] = $comment;
         }
 
@@ -344,6 +398,33 @@ class FeedService
         $response = new CommentDeleteResponse();
         $response->deleted = true;
         $response->commentId = 'comment-' . $commentUuid;
+        return $response;
+    }
+
+    public function toggleCommentReaction(string $commentId, CommentReactionToggleDTO $dto): CommentReactionToggleResponse
+    {
+        $authUser = Auth::getOrThrow();
+        $commentUuid = $this->normalizeCommentUuid($commentId);
+
+        $comment = $this->feedRepository->findCommentByUuid($commentUuid);
+        if (!$comment) {
+            throw new \InvalidArgumentException('Comment not found');
+        }
+
+        $emoji = $this->normalizeEmoji($dto->emoji);
+        $this->feedRepository->toggleCommentReaction(
+            commentUuid: $commentUuid,
+            userUuid: $authUser->uuid,
+            emoji: $emoji,
+            maxPerUser: self::MAX_REACTIONS_PER_COMMENT_PER_USER
+        );
+
+        $rows = $this->feedRepository->findCommentReactionsByCommentUuids([$commentUuid], $authUser->uuid);
+        $grouped = $this->groupCommentReactions($rows);
+
+        $response = new CommentReactionToggleResponse();
+        $response->commentId = $commentUuid;
+        $response->reactions = $grouped[$commentUuid] ?? [];
         return $response;
     }
 
@@ -804,19 +885,25 @@ class FeedService
     private function normalizeCommentUuid(string $commentId): string
     {
         $commentId = trim($commentId);
-        if (str_contains($commentId, '-')) {
-            [$type, $uuid] = explode('-', $commentId, 2);
-            if ($type !== 'comment') {
-                throw new \InvalidArgumentException('Invalid comment type');
-            }
-            $commentId = $uuid;
+        if (str_starts_with(strtolower($commentId), 'comment-')) {
+            $commentId = substr($commentId, 8);
         }
 
-        if (!preg_match('/^[0-9a-fA-F-]{36}$/', $commentId)) {
+        if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $commentId)) {
             throw new \InvalidArgumentException('Invalid commentId');
         }
 
         return strtolower($commentId);
+    }
+
+    private function normalizeEmoji(?string $emoji): string
+    {
+        $emoji = trim((string)$emoji);
+        if ($emoji === '') {
+            throw new \InvalidArgumentException('emoji is required');
+        }
+
+        return $emoji;
     }
 
     /**
@@ -867,10 +954,32 @@ class FeedService
     }
 
     /**
+     * @param array<int, array<string, mixed>> $reactionRows
+     * @return array<string, array<int, CommentReactionDto>>
+     */
+    private function groupCommentReactions(array $reactionRows): array
+    {
+        $byComment = [];
+        foreach ($reactionRows as $row) {
+            $uuid = (string)$row['comment_uuid'];
+            $byComment[$uuid] ??= [];
+
+            $dto = new CommentReactionDto();
+            $dto->emoji = (string)$row['emoji'];
+            $dto->count = isset($row['reactions_count']) ? (int)$row['reactions_count'] : 0;
+            $dto->active = !empty($row['is_active']);
+            $byComment[$uuid][] = $dto;
+        }
+
+        return $byComment;
+    }
+
+    /**
      * @param array<string, mixed> $row
      * @param array<int, array<string, mixed>> $media
+     * @param array<int, CommentReactionDto> $reactions
      */
-    private function mapCommentRowToDto(array $row, array $media): CommentDto
+    private function mapCommentRowToDto(array $row, array $media, array $reactions): CommentDto
     {
         $comment = new CommentDto();
         $comment->id = 'comment-' . (string)$row['comment_uuid'];
@@ -879,6 +988,7 @@ class FeedService
         $comment->text = $row['text'] !== null ? (string)$row['text'] : null;
         $comment->parentId = $row['parent_uuid'] ? 'comment-' . (string)$row['parent_uuid'] : null;
         $comment->media = $this->buildCommentMedia($media);
+        $comment->reactions = $reactions;
         $comment->children = [];
         return $comment;
     }

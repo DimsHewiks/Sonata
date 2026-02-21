@@ -16,6 +16,11 @@ class Auth
         self::$currentUser = null;
     }
 
+    public static function get(): ?AuthUser
+    {
+        return self::$currentUser;
+    }
+
     public static function getOrThrow(): AuthUser
     {
         if (self::$currentUser === null) {

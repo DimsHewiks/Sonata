@@ -17,6 +17,7 @@ services:
     build:
       context: .
       dockerfile: Docker/php/Dockerfile
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       DB_HOST: mariadb
       DB_NAME: sonata
@@ -32,6 +33,7 @@ services:
       - mariadb
     volumes:
       - .:/var/www/html
+      - sonata_vendor:/var/www/html/vendor
     networks:
       - sonata-net
 
@@ -49,6 +51,7 @@ services:
 
 volumes:
   db_data:
+  sonata_vendor:
 
 networks:
   sonata-net:

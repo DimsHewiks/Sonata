@@ -231,6 +231,104 @@ class FeedRepository
         return $stmt->fetchAll();
     }
 
+    public function toggleCommentReaction(
+        string $commentUuid,
+        string $userUuid,
+        string $emoji,
+        int $maxPerUser = 2
+    ): void {
+        $this->pdo->beginTransaction();
+
+        try {
+            $lockStmt = $this->pdo->prepare(
+                "SELECT emoji
+                 FROM comment_reactions
+                 WHERE comment_id = UUID_TO_BIN(?)
+                   AND user_id = UUID_TO_BIN(?)
+                 FOR UPDATE"
+            );
+            $lockStmt->execute([$commentUuid, $userUuid]);
+            $currentRows = $lockStmt->fetchAll();
+
+            $hasCurrentReaction = false;
+            foreach ($currentRows as $row) {
+                if ((string)$row['emoji'] === $emoji) {
+                    $hasCurrentReaction = true;
+                    break;
+                }
+            }
+
+            if ($hasCurrentReaction) {
+                $deleteStmt = $this->pdo->prepare(
+                    "DELETE FROM comment_reactions
+                     WHERE comment_id = UUID_TO_BIN(?)
+                       AND user_id = UUID_TO_BIN(?)
+                       AND emoji = ?"
+                );
+                $deleteStmt->execute([$commentUuid, $userUuid, $emoji]);
+            } else {
+                if (count($currentRows) >= $maxPerUser) {
+                    throw new \DomainException('REACTION_LIMIT_EXCEEDED');
+                }
+
+                $insertStmt = $this->pdo->prepare(
+                    "INSERT INTO comment_reactions (comment_id, user_id, emoji)
+                     VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)"
+                );
+                $insertStmt->execute([$commentUuid, $userUuid, $emoji]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * @param array<int, string> $commentUuids
+     * @return array<int, array<string, mixed>>
+     */
+    public function findCommentReactionsByCommentUuids(array $commentUuids, ?string $viewerUuid = null): array
+    {
+        if (empty($commentUuids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($commentUuids), 'UUID_TO_BIN(?)'));
+        if ($viewerUuid !== null) {
+            $stmt = $this->pdo->prepare(
+                "SELECT
+                    BIN_TO_UUID(comment_id) AS comment_uuid,
+                    emoji,
+                    COUNT(*) AS reactions_count,
+                    MAX(CASE WHEN user_id = UUID_TO_BIN(?) THEN 1 ELSE 0 END) AS is_active
+                 FROM comment_reactions
+                 WHERE comment_id IN ($placeholders)
+                 GROUP BY comment_id, emoji
+                 ORDER BY reactions_count DESC, emoji ASC"
+            );
+            $stmt->execute([$viewerUuid, ...$commentUuids]);
+            return $stmt->fetchAll();
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT
+                BIN_TO_UUID(comment_id) AS comment_uuid,
+                emoji,
+                COUNT(*) AS reactions_count,
+                0 AS is_active
+             FROM comment_reactions
+             WHERE comment_id IN ($placeholders)
+             GROUP BY comment_id, emoji
+             ORDER BY reactions_count DESC, emoji ASC"
+        );
+        $stmt->execute($commentUuids);
+        return $stmt->fetchAll();
+    }
+
     public function deleteCommentByUuid(string $commentUuid): void
     {
         $stmt = $this->pdo->prepare("DELETE FROM feed_comments WHERE uuid = UUID_TO_BIN(?)");
@@ -333,7 +431,7 @@ class FeedRepository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function findFeedItemsForUser(string $userUuid, int $limit = 50): array
+    public function findFeedItemsForUser(string $userUuid, int $limit = 20, int $offset = 0): array
     {
         $stmt = $this->pdo->prepare(
             "SELECT
@@ -363,11 +461,51 @@ class FeedRepository
             WHERE fi.user_uuid = UUID_TO_BIN(?)
                OR fi.wall_user_uuid = UUID_TO_BIN(?)
             ORDER BY fi.created_at DESC, fi.uuid DESC
-            LIMIT ?"
+            LIMIT ? OFFSET ?"
         );
         $stmt->bindValue(1, $userUuid);
         $stmt->bindValue(2, $userUuid);
         $stmt->bindValue(3, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(4, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function findFeedItemsGlobal(int $limit = 20, int $offset = 0): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT
+                BIN_TO_UUID(fi.uuid) AS feed_item_uuid,
+                fi.type,
+                fi.text,
+                fi.payload_json,
+                fi.likes_count,
+                fi.comments_count,
+                fi.created_at,
+                BIN_TO_UUID(u.uuid) AS user_uuid,
+                BIN_TO_UUID(fi.wall_user_uuid) AS wall_user_uuid,
+                u.name AS author_name,
+                u.login AS author_login,
+                ua.relative_path AS author_avatar_relative_path,
+                ua.extension AS author_avatar_extension
+            FROM feed_items fi
+            JOIN users u ON u.uuid = fi.user_uuid
+            LEFT JOIN users_avatars ua ON ua.id = (
+                SELECT ua2.id
+                FROM users_avatars ua2
+                WHERE ua2.user_uuid = u.uuid
+                  AND ua2.status = 1
+                ORDER BY ua2.created_at DESC, ua2.id DESC
+                LIMIT 1
+            )
+            ORDER BY fi.created_at DESC, fi.uuid DESC
+            LIMIT ? OFFSET ?"
+        );
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(2, $offset, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     }

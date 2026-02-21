@@ -28,6 +28,11 @@ class CommentDto
     public ?string $parentId = null;
 
     /**
+     * @var array<int, CommentReactionDto>
+     */
+    public array $reactions = [];
+
+    /**
      * @var array<int, CommentDto>
      */
     public array $children = [];

@@ -3,8 +3,10 @@
 namespace Api\Posts\Controllers;
 
 use Api\Posts\DTOs\Request\FeedCreateDTO;
+use Api\Posts\DTOs\Request\FeedListQueryDTO;
 use Api\Posts\DTOs\Request\QuizAnswerDTO;
 use Api\Posts\DTOs\Request\CommentCreateDTO;
+use Api\Posts\DTOs\Request\CommentReactionToggleDTO;
 use Api\Posts\DTOs\Request\CommentsQueryDTO;
 use Api\Posts\DTOs\Response\FeedCreateResponse;
 use Api\Posts\DTOs\Response\FeedListResponse;
@@ -13,11 +15,13 @@ use Api\Posts\DTOs\Response\DeleteFeedResponse;
 use Api\Posts\DTOs\Response\CommentCreateResponse;
 use Api\Posts\DTOs\Response\CommentListResponse;
 use Api\Posts\DTOs\Response\CommentDeleteResponse;
+use Api\Posts\DTOs\Response\CommentReactionToggleResponse;
 use Api\Posts\DTOs\Response\PostMediaListResponse;
 use Api\Posts\Services\FeedService;
 use Sonata\Framework\Attributes\Controller;
 use Sonata\Framework\Attributes\From;
 use Sonata\Framework\Attributes\Inject;
+use Sonata\Framework\Attributes\NoAuth;
 use Sonata\Framework\Attributes\Response as ResponseAttr;
 use Sonata\Framework\Attributes\Route;
 use Sonata\Framework\Attributes\Tag;
@@ -53,12 +57,24 @@ class FeedController
 
     #[Route(path: '/feed', method: 'GET', summary: 'Get feed')]
     #[ResponseAttr(FeedListResponse::class)]
-    public function list(): FeedListResponse
+    public function list(#[From('query')] FeedListQueryDTO $dto): FeedListResponse
     {
         try {
-            return $this->feedService->getFeed();
+            return $this->feedService->getFeed((int)($dto->limit ?? 20), (int)($dto->offset ?? 0));
         } catch (\Throwable $e) {
             Response::error('Failed to load feed', 500, $e->getMessage());
+        }
+    }
+
+    #[Route(path: '/feed/all', method: 'GET', summary: 'Get global feed')]
+    #[NoAuth]
+    #[ResponseAttr(FeedListResponse::class)]
+    public function listAll(#[From('query')] FeedListQueryDTO $dto): FeedListResponse
+    {
+        try {
+            return $this->feedService->getGlobalFeed((int)($dto->limit ?? 20), (int)($dto->offset ?? 0));
+        } catch (\Throwable $e) {
+            Response::error('Failed to load global feed', 500, $e->getMessage());
         }
     }
 
@@ -103,6 +119,7 @@ class FeedController
     }
 
     #[Route(path: '/feed/{id}/comments', method: 'GET', summary: 'Get comments')]
+    #[NoAuth]
     #[ResponseAttr(CommentListResponse::class)]
     public function listComments(string $id, #[From('query')] CommentsQueryDTO $dto): CommentListResponse
     {
@@ -139,6 +156,32 @@ class FeedController
             Response::error($e->getMessage(), $status);
         } catch (\Throwable $e) {
             Response::error('Failed to delete comment', 500, $e->getMessage());
+        }
+    }
+
+    #[Route(path: '/comments/{id}/reactions/toggle', method: 'POST', summary: 'Toggle comment reaction')]
+    #[ResponseAttr(CommentReactionToggleResponse::class)]
+    public function toggleCommentReaction(string $id, #[From('json')] CommentReactionToggleDTO $dto): CommentReactionToggleResponse
+    {
+        try {
+            return $this->feedService->toggleCommentReaction($id, $dto);
+        } catch (\InvalidArgumentException $e) {
+            $status = $e->getMessage() === 'Comment not found' ? 404 : 400;
+            Response::error($e->getMessage(), $status);
+        } catch (\DomainException $e) {
+            if ($e->getMessage() === 'REACTION_LIMIT_EXCEEDED') {
+                Response::error('Reaction limit exceeded', 422, 'REACTION_LIMIT_EXCEEDED');
+            }
+            Response::error($e->getMessage(), 422);
+        } catch (\RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'Unauthorized' => 401,
+                'Forbidden' => 403,
+                default => 500
+            };
+            Response::error($e->getMessage(), $status);
+        } catch (\Throwable $e) {
+            Response::error('Failed to toggle comment reaction', 500, $e->getMessage());
         }
     }
 
